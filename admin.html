@@ -1994,12 +1994,12 @@
                             <option value="all">ทุกปีงบประมาณ</option>
                             <!-- Injected dynamically -->
                         </select>
-                        <select class="filter-select" id="budgetTypeFilter" onchange="filterStaffCards()" title="กรองตามประเภทรายจ่าย">
-                            <option value="all">ทุกประเภทรายจ่าย</option>
+                        <select class="filter-select" id="budgetTypeFilter" onchange="filterStaffCards()" title="กรองตามประเภทงบประมาณ">
+                            <option value="all">ทุกประเภทงบประมาณ</option>
                             <!-- Injected dynamically -->
                         </select>
-                        <select class="filter-select" id="operationStatusFilter" onchange="filterStaffCards()" title="กรองตามสถานะดำเนินงาน">
-                            <option value="all">ทุกสถานะดำเนินงาน</option>
+                        <select class="filter-select" id="operationStatusFilter" onchange="filterStaffCards()" title="กรองตามการดำเนินงาน">
+                            <option value="all">ทุกการดำเนินงาน</option>
                             <!-- Injected dynamically -->
                         </select>
                         <select class="filter-select" id="sortFilter" onchange="filterStaffCards()" title="เรียงลำดับ">
@@ -2368,6 +2368,8 @@
         let allStaffList = [];
         let allProjects = [];
         let staffWorkloads = [];
+        let globalBudgetTypes = [];
+        let globalOperationStatuses = [];
         let currentModalStaff = null;
         let currentModalFilter = 'all';
         let currentStaffViewMode = 'grid';
@@ -2518,17 +2520,20 @@
             if (!supabaseClient) return;
 
             try {
-                // ดึงรายชื่อเจ้าหน้าที่จาก dropdown_options
-                const { data: teamData, error: teamErr } = await supabaseClient
+                // ดึงตัวเลือกทั้งหมดจาก dropdown_options (ทีมงาน, ประเภทงบประมาณ, การดำเนินงาน)
+                const { data: dropdownData, error: dropdownErr } = await supabaseClient
                     .from('dropdown_options')
                     .select('*')
-                    .eq('category', 'team')
                     .order('sort_order', { ascending: true });
 
-                if (teamErr) throw teamErr;
+                if (dropdownErr) throw dropdownErr;
 
-                rawStaffData = teamData || [];
+                const allOptions = dropdownData || [];
+                rawStaffData = allOptions.filter(d => d.category === 'team');
                 allStaffList = rawStaffData.map(t => t.item_value.trim()).filter(Boolean);
+
+                globalBudgetTypes = allOptions.filter(d => d.category === 'budget_type').map(d => d.item_value.trim()).filter(Boolean);
+                globalOperationStatuses = allOptions.filter(d => d.category === 'operation_status').map(d => d.item_value.trim()).filter(Boolean);
 
                 // ดึงโครงการทั้งหมด
                 const { data: projData, error: projErr } = await supabaseClient
@@ -2760,17 +2765,36 @@
             const currType = typeSelect.value;
             const currStatus = statusSelect.value;
 
+            // 1. ดึงปีงบประมาณจากโครงการทั้งหมด เรียงจากใหม่ไปเก่า
             const years = Array.from(new Set(allProjects.map(p => (p.budget_year || '').toString().trim()).filter(Boolean))).sort().reverse();
-            const types = Array.from(new Set(allProjects.map(p => (p.budget_type || '').toString().trim()).filter(Boolean))).sort();
-            const statuses = Array.from(new Set(allProjects.map(p => (p.operation_status || '').toString().trim()).filter(Boolean))).sort();
 
-            yearSelect.innerHTML = '<option value="all">ทุกปีงบประมาณ</option>' + years.map(y => `<option value="${escapeHtml(y)}">ปีงบฯ ${escapeHtml(y)}</option>`).join('');
-            typeSelect.innerHTML = '<option value="all">ทุกประเภทรายจ่าย</option>' + types.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
-            statusSelect.innerHTML = '<option value="all">ทุกสถานะดำเนินงาน</option>' + statuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+            // 2. ดึงประเภทงบประมาณจาก dropdown_options (ตามแดชบอร์ด) ผสานกับที่มีในโครงการ
+            const combinedTypes = [];
+            globalBudgetTypes.forEach(t => {
+                if (t && !combinedTypes.includes(t)) combinedTypes.push(t);
+            });
+            allProjects.forEach(p => {
+                const t = (p.budget_type || '').toString().trim();
+                if (t && !combinedTypes.includes(t)) combinedTypes.push(t);
+            });
+
+            // 3. ดึงการดำเนินงานจาก dropdown_options (ตามแดชบอร์ด) ผสานกับที่มีในโครงการ
+            const combinedStatuses = [];
+            globalOperationStatuses.forEach(s => {
+                if (s && !combinedStatuses.includes(s)) combinedStatuses.push(s);
+            });
+            allProjects.forEach(p => {
+                const s = (p.operation_status || '').toString().trim();
+                if (s && !combinedStatuses.includes(s)) combinedStatuses.push(s);
+            });
+
+            yearSelect.innerHTML = '<option value="all">ทุกปีงบประมาณ</option>' + years.map(y => `<option value="${escapeHtml(y)}">ปี พ.ศ. ${escapeHtml(y)}</option>`).join('');
+            typeSelect.innerHTML = '<option value="all">ทุกประเภทงบประมาณ</option>' + combinedTypes.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+            statusSelect.innerHTML = '<option value="all">ทุกการดำเนินงาน</option>' + combinedStatuses.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
 
             if (currYear && years.includes(currYear)) yearSelect.value = currYear;
-            if (currType && types.includes(currType)) typeSelect.value = currType;
-            if (currStatus && statuses.includes(currStatus)) statusSelect.value = currStatus;
+            if (currType && combinedTypes.includes(currType)) typeSelect.value = currType;
+            if (currStatus && combinedStatuses.includes(currStatus)) statusSelect.value = currStatus;
         }
 
         function resetFilters() {

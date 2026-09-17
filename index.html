@@ -1457,33 +1457,45 @@
                     
                     const yearFilter = document.getElementById('yearFilter');
                     const printYearFilter = document.getElementById('printYearFilter');
+                    const currentYearVal = yearFilter ? yearFilter.value : 'all';
+                    if (yearFilter) yearFilter.innerHTML = '<option value="all">ทุกปีงบประมาณ</option>';
+                    if (printYearFilter) printYearFilter.innerHTML = '<option value="all">ทุกปีงบประมาณ</option>';
                     Array.from(years).sort().reverse().forEach(year => {
                         const option = document.createElement('option');
                         option.value = year;
                         option.textContent = `ปี พ.ศ. ${year}`;
-                        yearFilter.appendChild(option);
-                        printYearFilter.appendChild(option.cloneNode(true));
+                        if (yearFilter) yearFilter.appendChild(option);
+                        if (printYearFilter) printYearFilter.appendChild(option.cloneNode(true));
                     });
+                    if (yearFilter && currentYearVal) yearFilter.value = currentYearVal;
                     
                     const typeFilter = document.getElementById('budgetTypeFilter');
                     const printTypeFilter = document.getElementById('printTypeFilter');
+                    const currentTypeVal = typeFilter ? typeFilter.value : 'all';
+                    if (typeFilter) typeFilter.innerHTML = '<option value="all">ทุกประเภทงบประมาณ</option>';
+                    if (printTypeFilter) printTypeFilter.innerHTML = '<option value="all">ทุกประเภทงบประมาณ</option>';
                     Array.from(types).sort().forEach(type => {
                         const option = document.createElement('option');
                         option.value = type;
                         option.textContent = type;
-                        typeFilter.appendChild(option);
-                        printTypeFilter.appendChild(option.cloneNode(true));
+                        if (typeFilter) typeFilter.appendChild(option);
+                        if (printTypeFilter) printTypeFilter.appendChild(option.cloneNode(true));
                     });
+                    if (typeFilter && currentTypeVal) typeFilter.value = currentTypeVal;
                     
                     const opStatusFilter = document.getElementById('operationStatusFilter');
                     const printOpStatusFilter = document.getElementById('printOperationStatusFilter');
+                    const currentOpVal = opStatusFilter ? opStatusFilter.value : 'all';
+                    if (opStatusFilter) opStatusFilter.innerHTML = '<option value="all">ทุกการดำเนินงาน</option>';
+                    if (printOpStatusFilter) printOpStatusFilter.innerHTML = '<option value="all">ทุกการดำเนินงาน</option>';
                     Array.from(opStatuses).sort().forEach(op => {
                         const option = document.createElement('option');
                         option.value = op;
                         option.textContent = op;
-                        opStatusFilter.appendChild(option);
-                        printOpStatusFilter.appendChild(option.cloneNode(true));
+                        if (opStatusFilter) opStatusFilter.appendChild(option);
+                        if (printOpStatusFilter) printOpStatusFilter.appendChild(option.cloneNode(true));
                     });
+                    if (opStatusFilter && currentOpVal) opStatusFilter.value = currentOpVal;
 
                     renderDashboard(allProjects);
                     
