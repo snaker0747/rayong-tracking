@@ -574,6 +574,12 @@
         .edit-card-btn:hover {
             opacity: 0.9;
         }
+        #deleteProjectBtn:hover {
+            background: #ef4444 !important;
+            color: white !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
 
         /* Toast notification styling */
         .toast {
@@ -932,9 +938,16 @@
             </div>
             
             <!-- Actions -->
-            <div style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-                <button onclick="closeEditModal()" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); cursor: pointer; font-weight: 500; font-family: inherit;">ยกเลิก</button>
-                <button onclick="submitEdit()" id="saveEditBtn" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: none; background: var(--primary-color); color: white; cursor: pointer; font-weight: 500; font-family: inherit; display: flex; align-items: center; gap: 0.5rem;">💾 บันทึก</button>
+            <div style="display: flex; gap: 1rem; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1.5rem; flex-wrap: wrap;">
+                <div>
+                    <button type="button" id="deleteProjectBtn" onclick="confirmDeleteProject()" style="padding: 0.8rem 1.4rem; border-radius: 8px; border: 1px solid #ef4444; background: rgba(239, 68, 68, 0.1); color: #ef4444; cursor: pointer; font-weight: 500; font-family: inherit; display: none; align-items: center; gap: 0.4rem; transition: all 0.2s ease;">
+                        🗑️ ลบโครงการ
+                    </button>
+                </div>
+                <div style="display: flex; gap: 0.8rem;">
+                    <button type="button" onclick="closeEditModal()" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); cursor: pointer; font-weight: 500; font-family: inherit;">ยกเลิก</button>
+                    <button type="button" onclick="submitEdit()" id="saveEditBtn" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: none; background: var(--primary-color); color: white; cursor: pointer; font-weight: 500; font-family: inherit; display: flex; align-items: center; gap: 0.5rem;">💾 บันทึก</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1085,6 +1098,38 @@
                 });
             } else {
                 console.warn("ยังไม่ได้ระบุ GOOGLE_SHEET_WEBAPP_URL ที่ถูกต้อง ข้อมูลจึงบันทึกลง Supabase เท่านั้น");
+            }
+        }
+
+        // ฟังก์ชันส่งคำสั่งลบไปยัง Google Sheet แบบคู่ขนาน Real-time
+        function syncDeleteToGoogleSheet(pin, projectId) {
+            // 1. หากรันภายใน Apps Script โดยตรง
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                if (typeof google.script.run.deleteProject === 'function') {
+                    google.script.run.deleteProject(pin, projectId);
+                }
+                console.log("Dual-Sync Delete: ส่งคำสั่งลบผ่าน google.script.run สำเร็จ");
+                return;
+            }
+
+            // 2. หากรันบน Vercel ส่งผ่าน Web App Webhook (doPost)
+            if (GOOGLE_SHEET_WEBAPP_URL && GOOGLE_SHEET_WEBAPP_URL.includes('/exec')) {
+                fetch(GOOGLE_SHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        pin: pin,
+                        action: 'delete',
+                        projectId: projectId
+                    })
+                }).then(() => {
+                    console.log("Dual-Sync Delete: ส่งคำสั่งลบลง Google Sheet สำเร็จ");
+                }).catch(err => {
+                    console.warn("Dual-Sync Delete Webhook ไม่สำเร็จ:", err);
+                });
             }
         }
 
@@ -1763,6 +1808,10 @@
                 if (inputEl) inputEl.dispatchEvent(new Event('input'));
             });
 
+            // ซ่อนปุ่มลบเมื่อเป็นการเพิ่มโครงการใหม่
+            const delBtn = document.getElementById('deleteProjectBtn');
+            if (delBtn) delBtn.style.display = 'none';
+
             document.getElementById('editModal').style.display = 'flex';
         }
 
@@ -1800,11 +1849,74 @@
                 if (inputEl) inputEl.dispatchEvent(new Event('input'));
             });
 
+            // แสดงปุ่มลบเมื่อเป็นการแก้ไขโครงการเดิม
+            const delBtn = document.getElementById('deleteProjectBtn');
+            if (delBtn) delBtn.style.display = 'inline-flex';
+
             document.getElementById('editModal').style.display = 'flex';
         }
 
         function closeEditModal() {
             document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function confirmDeleteProject() {
+            const rawId = document.getElementById('editProjectId').value;
+            if (!rawId) return;
+
+            const projectId = parseInt(rawId, 10);
+            const projectName = document.getElementById('editProjectName').value || `ลำดับที่ ${projectId}`;
+
+            const pin = adminPinCode;
+            if (!pin) {
+                alert('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+                closeEditModal();
+                return;
+            }
+
+            const confirmed = confirm(`⚠️ ยืนยันการลบโครงการ:\n"${projectName}" (ลำดับที่ ${projectId})\n\nหากลบแล้วข้อมูลจะถูกนำออกจากระบบทันที ยืนยันที่จะลบหรือไม่?`);
+            if (!confirmed) return;
+
+            const deleteBtn = document.getElementById('deleteProjectBtn');
+            const saveBtn = document.getElementById('saveEditBtn');
+            if (deleteBtn) {
+                deleteBtn.disabled = true;
+                deleteBtn.innerHTML = '⏳ กำลังลบ...';
+            }
+            if (saveBtn) saveBtn.disabled = true;
+
+            try {
+                // 1. ลบออกจาก Supabase
+                if (supabaseClient) {
+                    const { error } = await supabaseClient
+                        .from('projects')
+                        .delete()
+                        .eq('id', projectId);
+
+                    if (error) throw error;
+                }
+
+                showToast('ลบโครงการเรียบร้อยแล้ว!', '🗑️');
+                closeEditModal();
+
+                // 2. รีโหลดข้อมูลใหม่ทันที
+                document.getElementById('loader').style.display = 'flex';
+                document.getElementById('dashboard-content').style.display = 'none';
+                await loadDashboardDataFromSupabase();
+                filterProjects();
+
+                // 3. ส่งคำสั่งลบไปยัง Google Sheet (Dual-Sync)
+                syncDeleteToGoogleSheet(pin, projectId);
+
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการลบโครงการ: ' + (err.message || err));
+            } finally {
+                if (deleteBtn) {
+                    deleteBtn.disabled = false;
+                    deleteBtn.innerHTML = '🗑️ ลบโครงการ';
+                }
+                if (saveBtn) saveBtn.disabled = false;
+            }
         }
 
         async function submitEdit() {
