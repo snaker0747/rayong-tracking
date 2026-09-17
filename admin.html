@@ -2370,6 +2370,13 @@
         let staffWorkloads = [];
         let currentModalStaff = null;
         let currentModalFilter = 'all';
+        let currentStaffViewMode = 'grid';
+        try {
+            const savedMode = localStorage.getItem('admin_staff_view_mode');
+            if (savedMode && ['grid', 'compact', 'table'].includes(savedMode)) {
+                currentStaffViewMode = savedMode;
+            }
+        } catch (e) {}
 
         const STEPS = [
             "แบบรูปรายการและแบบแปลน",
