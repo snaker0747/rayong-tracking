@@ -757,6 +757,46 @@
             border-color: #f97316;
             color: white;
         }
+
+        /* Responsive Styles for Mobile and Tablet */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+            header h1 {
+                font-size: 1.5rem;
+            }
+            header p {
+                font-size: 0.95rem;
+            }
+            .controls {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .filter-box {
+                flex-direction: column;
+                width: 100%;
+            }
+            .filter-box select {
+                width: 100%;
+                min-width: 100%;
+            }
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .project-header {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .project-budget {
+                text-align: left;
+            }
+            .stepper {
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1013,7 +1053,7 @@
         <div class="header-tools">
             <button id="adminPortalBtn" onclick="openAdminLoginModal()" class="admin-portal-btn" title="ระบบบริหารงานหลังบ้าน & ติดตาม KPI เจ้าหน้าที่">🛡️ Admin</button>
             <button id="addProjectBtn" onclick="openAddModal()" class="add-project-btn" style="display: none;" title="เพิ่มโครงการใหม่">➕ เพิ่มโครงการใหม่</button>
-            <button id="loginToggleBtn" onclick="toggleLogin()" class="login-btn" title="เข้าสู่ระบบ">🔑 เข้าสู่ระบบ</button>
+            <button id="loginToggleBtn" onclick="toggleLogin()" class="login-btn" title="Staff (เจ้าหน้าที่)">🔑 Staff</button>
             <button onclick="openPrintModal()" class="print-btn" title="พิมพ์รายงานเป็น PDF">🖨️ พิมพ์รายงาน</button>
             <button id="themeToggle" class="theme-btn" title="เปลี่ยนธีม">🌙</button>
         </div>
@@ -1211,6 +1251,57 @@
 
             // ดึงข้อมูลผ่าน Supabase เป็นหลัก
             loadDashboardDataFromSupabase();
+            setupRealtimeSubscription();
+        });
+
+        // Setup Supabase Realtime Subscription for automatic updates
+        let realtimeChannelProjects = null;
+        let realtimeChannelDropdown = null;
+        let realtimeDebounceTimer = null;
+
+        function setupRealtimeSubscription() {
+            if (!supabaseClient) return;
+
+            function triggerAutoReload(sourceTable) {
+                clearTimeout(realtimeDebounceTimer);
+                realtimeDebounceTimer = setTimeout(async () => {
+                    console.log(`[Realtime Auto-Sync] Table '${sourceTable}' changed, refreshing index view...`);
+                    await loadDashboardDataFromSupabase();
+                    if (typeof filterProjects === 'function') filterProjects();
+                    showToast('⚡ ข้อมูลโครงการได้รับการอัปเดตแบบเรียลไทม์แล้ว', '🔄');
+                }, 300);
+            }
+
+            try {
+                if (!realtimeChannelProjects) {
+                    realtimeChannelProjects = supabaseClient
+                        .channel('index-realtime-projects')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, (payload) => {
+                            triggerAutoReload('projects');
+                        })
+                        .subscribe();
+                }
+
+                if (!realtimeChannelDropdown) {
+                    realtimeChannelDropdown = supabaseClient
+                        .channel('index-realtime-dropdown')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'dropdown_options' }, (payload) => {
+                            triggerAutoReload('dropdown_options');
+                        })
+                        .subscribe();
+                }
+            } catch (err) {
+                console.warn("Supabase Realtime setup warning:", err);
+            }
+        }
+
+        // Auto reload when returning to tab
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && supabaseClient) {
+                loadDashboardDataFromSupabase().then(() => {
+                    if (typeof filterProjects === 'function') filterProjects();
+                });
+            }
         });
 
         async function loadDashboardDataFromSupabase() {
@@ -1729,8 +1820,8 @@
                     loginToggleBtn.style.color = 'white';
                     if (addProjectBtn) addProjectBtn.style.display = 'flex';
                 } else {
-                    loginToggleBtn.innerHTML = '🔑 เข้าสู่ระบบ';
-                    loginToggleBtn.title = 'เข้าสู่ระบบเจ้าหน้าที่';
+                    loginToggleBtn.innerHTML = '🔑 Staff';
+                    loginToggleBtn.title = 'Staff (เจ้าหน้าที่)';
                     loginToggleBtn.style.background = 'var(--card-bg)';
                     loginToggleBtn.style.color = 'var(--text-main)';
                     if (addProjectBtn) addProjectBtn.style.display = 'none';
