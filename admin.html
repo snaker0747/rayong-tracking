@@ -304,6 +304,30 @@
             background: var(--primary-light);
         }
 
+        .topbar-logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 0.55rem 1.1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .topbar-logout-btn:hover {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+            transform: translateY(-1px);
+        }
+
         .content-area {
             padding: 2rem;
             flex-grow: 1;
@@ -1095,6 +1119,12 @@
                 </svg>
                 <span>หน้าหลักประชาชน</span>
             </a>
+            <a class="sidebar-item" onclick="logoutAdmin()" title="ออกจากระบบ Admin" style="color: #ef4444; margin-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.85rem;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: #ef4444;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>ออกจากระบบ</span>
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -1130,6 +1160,12 @@
                 </a>
                 <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="เปลี่ยนธีม มืด/สว่าง">
                     🌙
+                </button>
+                <button class="topbar-logout-btn" onclick="logoutAdmin()" title="ออกจากระบบ Admin">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span>ออกจากระบบ</span>
                 </button>
             </div>
         </header>
