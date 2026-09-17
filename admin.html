@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบริหารภาระงาน & KPI สำนักช่าง เทศบาลนครระยอง</title>
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --primary-light: rgba(2, 132, 199, 0.1);
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --sidebar-active: #0284c7;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-active: #ffffff;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --amber: #f59e0b;
+            --danger: #ef4444;
+            --purple: #8b5cf6;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.02);
+            --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.08);
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+        }
+
+        [data-theme="dark"] {
+            --sidebar-bg: #090d16;
+            --sidebar-hover: #131b2e;
+            --sidebar-active: #0284c7;
+            --sidebar-text: #94a3b8;
+            --sidebar-text-active: #ffffff;
+            --bg: #0b1120;
+            --card-bg: #131d31;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #1e293b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            min-height: 100vh;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+
+        .sidebar-brand img {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: white;
+        }
+
+        .sidebar-brand-text h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+
+        .sidebar-brand-text p {
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .sidebar-menu {
+            padding: 1.25rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex-grow: 1;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            color: var(--sidebar-text);
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 0.92rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .sidebar-item:hover {
+            background-color: var(--sidebar-hover);
+            color: #ffffff;
+            transform: translateX(3px);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--sidebar-active);
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+        }
+
+        .sidebar-item svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-footer {
+            padding: 1.25rem;
+            border-top: 1px solid rgba(255,255,255,0.07);
+            background: rgba(0,0,0,0.15);
+        }
+
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: white;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .user-info h4 {
+            font-size: 0.88rem;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .user-info p {
+            font-size: 0.75rem;
+            color: var(--sidebar-text);
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 0.6rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Main Content */
+        .main-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+
+        .top-navbar {
+            height: 72px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .nav-title h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .nav-title p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: scale(1.05);
+            background: var(--primary-light);
+        }
+
+        .public-site-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.55rem 1rem;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .public-site-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .content-area {
+            padding: 2rem;
+            flex-grow: 1;
+        }
+
+        /* KPI Top Cards Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.4rem;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .kpi-card-info h4 {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-card-info .kpi-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.1;
+            margin-bottom: 0.4rem;
+        }
+
+        .kpi-card-info .kpi-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .kpi-icon.blue { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
+        .kpi-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .kpi-icon.emerald { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+        .kpi-icon.purple { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+
+        /* Filter & Search Bar */
+        .filter-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: var(--shadow-sm);
+            flex-wrap: wrap;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex-grow: 1;
+            max-width: 420px;
+        }
+
+        .search-wrapper svg {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            color: var(--text-muted);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.65rem 1rem 0.65rem 2.6rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 0.65rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: 0.88rem;
+            cursor: pointer;
+            outline: none;
+            font-weight: 500;
+        }
+
+        .filter-select:focus {
+            border-color: var(--primary);
+        }
+
+        /* Section Header */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+        }
+
+        .section-title h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Staff Workload Cards Grid */
+        .staff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .staff-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .staff-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(2, 132, 199, 0.4);
+        }
+
+        .staff-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 1.2rem;
+            gap: 0.75rem;
+        }
+
+        .staff-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .staff-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            color: white;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .staff-details h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+            margin-bottom: 0.2rem;
+        }
+
+        .staff-details p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Workload Badges */
+        .workload-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .badge-high {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .badge-medium {
+            background: rgba(245, 158, 11, 0.12);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+
+        .badge-low {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .badge-zero {
+            background: rgba(148, 163, 184, 0.12);
+            color: #64748b;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        /* Stats Row inside Staff Card */
+        .staff-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+            background: var(--bg);
+            padding: 0.9rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.1rem;
+            border: 1px solid var(--border);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-item .stat-num {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.1;
+        }
+
+        .stat-item .stat-label {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Progress Bar (KPI) */
+        .kpi-progress-container {
+            margin-bottom: 1.2rem;
+        }
+
+        .kpi-progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .kpi-progress-bar {
+            height: 7px;
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 50px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .kpi-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 50px;
+            transition: width 0.5s ease;
+        }
+
+        /* Role Pills Grid */
+        .role-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 1.3rem;
+        }
+
+        .role-pill {
+            font-size: 0.74rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .role-pill strong {
+            color: var(--primary);
+        }
+
+        /* View Workload Button */
+        .view-workload-btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .view-workload-btn:hover {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+        }
+
+        /* Drill-Down Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 1.5rem 1.75rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+        }
+
+        .modal-header-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .modal-close-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .modal-body {
+            padding: 1.5rem 1.75rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-tab.active {
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        /* Project Cards inside Modal */
+        .modal-project-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .modal-project-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .project-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-id-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            display: inline-block;
+            margin-bottom: 0.35rem;
+        }
+
+        .project-title-text {
+            font-size: 0.98rem;
+            font-weight: 600;
+            color: var(--text-main);
+            line-height: 1.35;
+        }
+
+        .project-budget-tag {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .project-budget-tag .b-amt {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .project-budget-tag .b-yr {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .role-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .role-tag-item {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            background: rgba(2, 132, 199, 0.1);
+            color: var(--primary);
+            font-weight: 600;
+            border: 1px solid rgba(2, 132, 199, 0.2);
+        }
+
+        .stepper-mini {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .stepper-dot {
+            flex-grow: 1;
+            height: 6px;
+            background: rgba(148, 163, 184, 0.25);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .stepper-dot.active {
+            background: var(--success);
+        }
+
+        .stepper-dot.current {
+            background: var(--warning);
+            box-shadow: 0 0 6px var(--warning);
+        }
+
+        .stepper-caption {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+
+        /* Table View for All Projects & KPI Analytics */
+        .analytics-table-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .custom-table th {
+            background: var(--bg);
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .custom-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .custom-table tr:hover td {
+            background: rgba(2, 132, 199, 0.03);
+        }
+
+        /* Login Screen Overlay (Guard) */
+        #authScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #090d16;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .login-box {
+            background: #131d31;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .login-logo {
+            width: 76px;
+            height: 76px;
+            border-radius: 20px;
+            background: white;
+            padding: 4px;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 10px 25px rgba(2, 132, 199, 0.3);
+        }
+
+        .login-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 80px;
+            }
+            .sidebar-brand-text, .sidebar-item span, .user-info, .sidebar-footer button span {
+                display: none;
+            }
+            .sidebar-brand {
+                justify-content: center;
+                padding: 1rem 0.5rem;
+            }
+            .sidebar-item {
+                justify-content: center;
+                padding: 0.75rem;
+            }
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                min-height: auto;
+                position: relative;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.5rem 1rem;
+            }
+            .sidebar-menu {
+                flex-direction: row;
+                padding: 0;
+            }
+            .sidebar-footer {
+                display: none;
+            }
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            .top-navbar {
+                padding: 0 1rem;
+            }
+            .content-area {
+                padding: 1rem;
+            }
+            .staff-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Auth Guard Screen (Username: admin, Password: 4321) -->
+    <div id="authScreen" style="display: none;">
+        <div class="login-box">
+            <div class="login-logo">
+                <img src="https://drive.google.com/thumbnail?id=10sQCt0_O4dIjq_2sZvPEhPXwDGbv9idm&sz=w500" alt="เทศบาลนครระยอง">
+            </div>
+            <h2 style="font-size: 1.4rem; font-weight: 700; color: #ffffff; margin-bottom: 0.3rem;">ระบบบริหารงานหลังบ้าน</h2>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 2rem;">สำนักช่าง เทศบาลนครระยอง (Admin Portal)</p>
+            
+            <form id="loginForm" onsubmit="submitAuth(event)">
+                <div style="text-align: left; margin-bottom: 1.2rem;">
+                    <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 500; display: block; margin-bottom: 0.4rem;">ชื่อผู้ใช้ (Username)</label>
+                    <input type="text" id="authUsername" required placeholder="admin" autocomplete="username" style="width: 100%; padding: 0.8rem 1.1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: #ffffff; font-size: 0.95rem; outline: none;">
+                </div>
+                <div style="text-align: left; margin-bottom: 1.5rem;">
+                    <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: 500; display: block; margin-bottom: 0.4rem;">รหัสผ่าน (Password)</label>
+                    <input type="password" id="authPassword" required placeholder="••••" autocomplete="current-password" style="width: 100%; padding: 0.8rem 1.1rem; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: #ffffff; font-size: 0.95rem; outline: none;">
+                </div>
+                <div id="authErrorMsg" style="display: none; color: #ef4444; font-size: 0.85rem; margin-bottom: 1.2rem; background: rgba(239, 68, 68, 0.1); padding: 0.6rem; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                    ⚠️ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง
+                </div>
+                <button type="submit" style="width: 100%; padding: 0.85rem; border-radius: 12px; border: none; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; font-weight: 600; font-size: 1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4);">
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+            <div style="margin-top: 1.5rem;">
+                <a href="index.html" style="color: #64748b; font-size: 0.82rem; text-decoration: none;">← กลับสู่หน้าหลักประชาชน</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <img src="https://drive.google.com/thumbnail?id=10sQCt0_O4dIjq_2sZvPEhPXwDGbv9idm&sz=w500" alt="โลโก้สำนักช่าง">
+            <div class="sidebar-brand-text">
+                <h2>สำนักช่าง ระยอง</h2>
+                <p>Admin & KPI Portal</p>
+            </div>
+        </div>
+
+        <nav class="sidebar-menu">
+            <a class="sidebar-item active" id="navWorkload" onclick="switchView('workload')">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <span>ภาระงานรายบุคคล</span>
+            </a>
+            <a class="sidebar-item" id="navAnalytics" onclick="switchView('analytics')">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>วิเคราะห์สถิติ & KPI</span>
+            </a>
+            <a class="sidebar-item" id="navProjects" onclick="switchView('projects')">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>โครงการทั้งหมด</span>
+            </a>
+            <a href="index.html" class="sidebar-item" title="กลับหน้าเว็บหลัก">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span>หน้าหลักประชาชน</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">AD</div>
+                <div class="user-info">
+                    <h4>admin</h4>
+                    <p>ผู้ดูแลระบบสำนักช่าง</p>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logoutAdmin()">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>ออกจากระบบ</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+        <!-- Top Navbar -->
+        <header class="top-navbar">
+            <div class="nav-left">
+                <div class="nav-title">
+                    <h1 id="pageHeading">ภาระงานรายบุคคล & ติดตาม KPI</h1>
+                    <p id="pageSubHeading">ระบบวิเคราะห์การกระจายงานและติดตามความก้าวหน้าโครงการรายเจ้าหน้าที่</p>
+                </div>
+            </div>
+            <div class="nav-right">
+                <a href="index.html" class="public-site-btn">
+                    <span>🌐 หน้าหลักติดตามโครงการ</span>
+                </a>
+                <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="เปลี่ยนธีม มืด/สว่าง">
+                    🌙
+                </button>
+            </div>
+        </header>
+
+        <main class="content-area">
+            <!-- 4 Top KPI Metric Cards -->
+            <section class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-card-info">
+                        <h4>เจ้าหน้าที่ทั้งหมด</h4>
+                        <div class="kpi-value" id="kpiTotalStaff">14 ท่าน</div>
+                        <div class="kpi-sub" id="kpiStaffActive">กำลังปฏิบัติงาน 0 ท่าน</div>
+                    </div>
+                    <div class="kpi-icon blue">👥</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-card-info">
+                        <h4>โครงการที่กำลังดำเนินการ</h4>
+                        <div class="kpi-value" id="kpiActiveProjects">0 งาน</div>
+                        <div class="kpi-sub" id="kpiActiveRate">อยู่ระหว่างขั้นตอน 1-6</div>
+                    </div>
+                    <div class="kpi-icon amber">⏳</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-card-info">
+                        <h4>โครงการแล้วเสร็จ (KPI)</h4>
+                        <div class="kpi-value" id="kpiCompletedProjects">0 งาน</div>
+                        <div class="kpi-sub" id="kpiCompletedRate">ความสำเร็จ 0%</div>
+                    </div>
+                    <div class="kpi-icon emerald">✅</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-card-info">
+                        <h4>งบประมาณรวมในระบบ</h4>
+                        <div class="kpi-value" id="kpiTotalBudget">0.00 ฿</div>
+                        <div class="kpi-sub" id="kpiProjectCount">จากทั้งหมด 0 โครงการ</div>
+                    </div>
+                    <div class="kpi-icon purple">💰</div>
+                </div>
+            </section>
+
+            <!-- VIEW 1: Staff Workload Cards Grid -->
+            <div id="viewWorkload">
+                <!-- Search & Filters -->
+                <div class="filter-panel">
+                    <div class="search-wrapper">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" class="search-input" id="staffSearchInput" placeholder="ค้นหาชื่อเจ้าหน้าที่ หรือ โครงการ..." oninput="filterStaffCards()">
+                    </div>
+                    <div class="filter-controls">
+                        <select class="filter-select" id="roleFilter" onchange="filterStaffCards()">
+                            <option value="all">ทุกบทบาทหน้าที่</option>
+                            <option value="surveyor">ผู้สำรวจ</option>
+                            <option value="designer">ผู้ออกแบบ</option>
+                            <option value="draftsman">ผู้เขียนแบบ</option>
+                            <option value="estimator">ผู้ประมาณราคา</option>
+                        </select>
+                        <select class="filter-select" id="workloadFilter" onchange="filterStaffCards()">
+                            <option value="all">ทุกระดับภาระงาน</option>
+                            <option value="high">🔴 ภาระงานสูง (>5 งาน)</option>
+                            <option value="medium">🟡 ปานกลาง (3-5 งาน)</option>
+                            <option value="low">🟢 งานปกติ (1-2 งาน)</option>
+                            <option value="zero">⚪ ยังไม่มีงาน (0 งาน)</option>
+                        </select>
+                        <select class="filter-select" id="sortFilter" onchange="filterStaffCards()">
+                            <option value="projects_desc">เรียง: ภาระงานมากสุด</option>
+                            <option value="projects_asc">เรียง: ภาระงานน้อยสุด</option>
+                            <option value="budget_desc">เรียง: งบประมาณมากสุด</option>
+                            <option value="name_asc">เรียง: ชื่อ ก-ฮ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>👥 รายชื่อเจ้าหน้าที่ผู้รับผิดชอบ (<span id="staffCountDisplay">0</span> ท่าน)</h2>
+                        <p>คลิกที่การ์ดเพื่อดูรายละเอียดโครงการและขั้นตอนความก้าวหน้ารายบุคคล</p>
+                    </div>
+                </div>
+
+                <!-- Grid of Staff Cards -->
+                <div class="staff-grid" id="staffCardsGrid">
+                    <!-- Dynamic staff cards injected here -->
+                </div>
+            </div>
+
+            <!-- VIEW 2: Analytics & KPI Ranking View -->
+            <div id="viewAnalytics" style="display: none;">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>📈 ตารางวิเคราะห์ KPI & สรุปภาระงานรายบุคคล</h2>
+                        <p>ตารางจัดอันดับการถือครองโครงการและสถิติความสำเร็จของงาน</p>
+                    </div>
+                </div>
+                <div class="analytics-table-wrapper">
+                    <table class="custom-table" id="analyticsTable">
+                        <thead>
+                            <tr>
+                                <th>ลำดับ</th>
+                                <th>ชื่อเจ้าหน้าที่</th>
+                                <th>โครงการทั้งหมด</th>
+                                <th>กำลังดำเนินการ</th>
+                                <th>แล้วเสร็จ</th>
+                                <th>อัตรา KPI ความสำเร็จ</th>
+                                <th>งบประมาณรวมที่ดูแล</th>
+                                <th>ระดับภาระงาน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsTableBody">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 3: All Projects Table View -->
+            <div id="viewProjects" style="display: none;">
+                <div class="section-header">
+                    <div class="section-title">
+                        <h2>📁 โครงการทั้งหมดในระบบ (<span id="allProjectsCount">0</span> โครงการ)</h2>
+                        <p>รายชื่อโครงการ งบประมาณ และเจ้าหน้าที่ผู้รับผิดชอบ</p>
+                    </div>
+                </div>
+                <div class="analytics-table-wrapper">
+                    <table class="custom-table" id="allProjectsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ลำดับ</th>
+                                <th>ชื่อโครงการ</th>
+                                <th>งบประมาณ (บาท)</th>
+                                <th>การดำเนินงาน</th>
+                                <th>ผู้สำรวจ / ออกแบบ / เขียนแบบ / ประมาณราคา</th>
+                                <th>ขั้นตอน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="allProjectsTableBody">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Drill-Down Modal: Staff Projects Breakdown -->
+    <div id="staffModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-header-profile">
+                    <div class="staff-avatar" id="modalStaffAvatar" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
+                        ภอ
+                    </div>
+                    <div>
+                        <h2 id="modalStaffName" style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">
+                            นายภาณุทัศน์ อุปถัมภ์
+                        </h2>
+                        <p id="modalStaffRoleSummary" style="font-size: 0.82rem; color: var(--text-muted);">
+                            ภาระงานทั้งหมด: 8 โครงการ | งบประมาณรวม: 45,000,000 บาท
+                        </p>
+                    </div>
+                </div>
+                <button class="modal-close-btn" onclick="closeStaffModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Filter Tabs inside modal -->
+                <div class="modal-tabs">
+                    <button class="modal-tab active" id="modalTabAll" onclick="setModalTab('all')">โครงการทั้งหมด (<span id="modalTabAllCount">0</span>)</button>
+                    <button class="modal-tab" id="modalTabActive" onclick="setModalTab('active')">กำลังดำเนินการ (<span id="modalTabActiveCount">0</span>)</button>
+                    <button class="modal-tab" id="modalTabCompleted" onclick="setModalTab('completed')">แล้วเสร็จ (<span id="modalTabCompletedCount">0</span>)</button>
+                </div>
+
+                <div id="modalProjectsList">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://awfenzwfywelxmnnalva.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_ZadcQEz6xuirM1CT9HGSTw_D1Cw0xdS';
+        const supabaseClient = (typeof window !== 'undefined' && window.supabase) 
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+            : null;
+
+        // Global State
+        let allStaffList = [];
+        let allProjects = [];
+        let staffWorkloads = [];
+        let currentModalStaff = null;
+        let currentModalFilter = 'all';
+
+        const STEPS = [
+            "แบบรูปรายการและแบบแปลน",
+            "ขอความเห็นชอบรูปแบบ/eGP",
+            "คกก.จัดทำราคากลาง",
+            "ขอความเห็นชอบราคากลาง",
+            "ขออนุมัติจ้าง",
+            "สัญญา",
+            "ดำเนินการแล้วเสร็จ"
+        ];
+
+        const AVATAR_GRADIENTS = [
+            'linear-gradient(135deg, #0284c7, #38bdf8)',
+            'linear-gradient(135deg, #10b981, #34d399)',
+            'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+            'linear-gradient(135deg, #f59e0b, #fbbf24)',
+            'linear-gradient(135deg, #ec4899, #f472b6)',
+            'linear-gradient(135deg, #06b6d4, #22d3ee)',
+            'linear-gradient(135deg, #6366f1, #818cf8)'
+        ];
+
+        // 1. Authentication Check
+        function checkAuth() {
+            const isAuth = sessionStorage.getItem('rayong_admin_auth') === 'true';
+            const authScreen = document.getElementById('authScreen');
+            if (!isAuth) {
+                authScreen.style.display = 'flex';
+                document.getElementById('authUsername').focus();
+                return false;
+            } else {
+                authScreen.style.display = 'none';
+                return true;
+            }
+        }
+
+        function submitAuth(e) {
+            e.preventDefault();
+            const u = document.getElementById('authUsername').value.trim();
+            const p = document.getElementById('authPassword').value.trim();
+
+            if (u === 'admin' && p === '4321') {
+                sessionStorage.setItem('rayong_admin_auth', 'true');
+                document.getElementById('authScreen').style.display = 'none';
+                initDashboard();
+            } else {
+                document.getElementById('authErrorMsg').style.display = 'block';
+                document.getElementById('authPassword').value = '';
+                document.getElementById('authPassword').focus();
+            }
+        }
+
+        function logoutAdmin() {
+            if (confirm('คุณต้องการออกจากระบบบริหารงานหลังบ้านหรือไม่?')) {
+                sessionStorage.removeItem('rayong_admin_auth');
+                window.location.href = 'index.html';
+            }
+        }
+
+        // 2. Theme Management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('dashboard_theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) btn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('dashboard_theme', next);
+            document.getElementById('themeToggleBtn').innerText = next === 'dark' ? '☀️' : '🌙';
+        }
+
+        // 3. Navigation View Switcher
+        function switchView(viewName) {
+            document.getElementById('viewWorkload').style.display = 'none';
+            document.getElementById('viewAnalytics').style.display = 'none';
+            document.getElementById('viewProjects').style.display = 'none';
+
+            document.getElementById('navWorkload').classList.remove('active');
+            document.getElementById('navAnalytics').classList.remove('active');
+            document.getElementById('navProjects').classList.remove('active');
+
+            if (viewName === 'workload') {
+                document.getElementById('viewWorkload').style.display = 'block';
+                document.getElementById('navWorkload').classList.add('active');
+                document.getElementById('pageHeading').innerText = 'ภาระงานรายบุคคล & ติดตาม KPI';
+                document.getElementById('pageSubHeading').innerText = 'ระบบวิเคราะห์การกระจายงานและติดตามความก้าวหน้าโครงการรายเจ้าหน้าที่';
+            } else if (viewName === 'analytics') {
+                document.getElementById('viewAnalytics').style.display = 'block';
+                document.getElementById('navAnalytics').classList.add('active');
+                document.getElementById('pageHeading').innerText = 'วิเคราะห์สถิติ & จัดอันดับ KPI';
+                document.getElementById('pageSubHeading').innerText = 'ตารางสรุปผลงาน ความสำเร็จ และประสิทธิภาพการดำเนินงานรายบุคคล';
+            } else if (viewName === 'projects') {
+                document.getElementById('viewProjects').style.display = 'block';
+                document.getElementById('navProjects').classList.add('active');
+                document.getElementById('pageHeading').innerText = 'โครงการทั้งหมดในระบบ';
+                document.getElementById('pageSubHeading').innerText = 'ตรวจสอบรายละเอียดโครงการ งบประมาณ และเจ้าหน้าที่ผู้รับผิดชอบ';
+            }
+        }
+
+        // 4. Data Loading & KPI Calculation
+        async function initDashboard() {
+            if (!supabaseClient) return;
+
+            try {
+                // ดึงรายชื่อเจ้าหน้าที่จาก dropdown_options
+                const { data: teamData, error: teamErr } = await supabaseClient
+                    .from('dropdown_options')
+                    .select('*')
+                    .eq('category', 'team')
+                    .order('sort_order', { ascending: true });
+
+                if (teamErr) throw teamErr;
+
+                allStaffList = (teamData || []).map(t => t.item_value.trim()).filter(Boolean);
+
+                // ดึงโครงการทั้งหมด
+                const { data: projData, error: projErr } = await supabaseClient
+                    .from('projects')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (projErr) throw projErr;
+
+                allProjects = projData || [];
+
+                calculateWorkloads();
+                renderTopKPICards();
+                filterStaffCards();
+                renderAnalyticsTable();
+                renderAllProjectsTable();
+
+            } catch (err) {
+                console.error("Dashboard initialization error:", err);
+                alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + (err.message || err));
+            }
+        }
+
+        // Helper คำนวณสถานะขั้นตอนล่าสุด (0 ถึง 6)
+        function getProjectCurrentStep(p) {
+            const steps = [
+                p.step_1_date,
+                p.step_2_date,
+                p.step_3_date,
+                p.step_4_date,
+                p.step_5_date,
+                p.step_6_date,
+                p.step_7_date
+            ];
+            let lastIdx = -1;
+            for (let i = 0; i < steps.length; i++) {
+                if (steps[i] && steps[i].toString().trim() !== '') {
+                    lastIdx = i;
+                }
+            }
+            return lastIdx;
+        }
+
+        // ตรวจสอบว่าโครงการแล้วเสร็จหรือไม่
+        function isProjectCompleted(p) {
+            const lastStep = getProjectCurrentStep(p);
+            const op = (p.operation_status || '').trim();
+            return lastStep === 6 || op === 'ดำเนินการแล้วเสร็จ' || op === 'เบิกจ่ายแล้วเสร็จ';
+        }
+
+        // คำนวณภาระงานแยกรายบุคคล
+        function calculateWorkloads() {
+            // รวบรวมรายชื่อเจ้าหน้าที่ทั้งหมด (ทั้งจากตาราง dropdown_options และที่อาจถูกพิมพ์เพิ่มในโครงการ)
+            const staffSet = new Set(allStaffList);
+
+            allProjects.forEach(p => {
+                ['surveyor', 'designer', 'draftsman', 'estimator'].forEach(field => {
+                    const val = p[field];
+                    if (val) {
+                        val.split(',').forEach(n => {
+                            const cleanName = n.trim();
+                            if (cleanName && cleanName !== '-') staffSet.add(cleanName);
+                        });
+                    }
+                });
+            });
+
+            staffWorkloads = Array.from(staffSet).map((name, index) => {
+                const assignedProjects = [];
+                let roleCount = { surveyor: 0, designer: 0, draftsman: 0, estimator: 0 };
+                let totalBudget = 0;
+                let completedCount = 0;
+                let activeCount = 0;
+
+                allProjects.forEach(p => {
+                    let rolesInThisProject = [];
+
+                    const checkRole = (field, roleName) => {
+                        const val = p[field] || '';
+                        const names = val.split(',').map(s => s.trim());
+                        if (names.includes(name)) {
+                            rolesInThisProject.push(roleName);
+                            roleCount[field]++;
+                        }
+                    };
+
+                    checkRole('surveyor', 'ผู้สำรวจ');
+                    checkRole('designer', 'ผู้ออกแบบ');
+                    checkRole('draftsman', 'ผู้เขียนแบบ');
+                    checkRole('estimator', 'ผู้ประมาณราคา');
+
+                    if (rolesInThisProject.length > 0) {
+                        const isDone = isProjectCompleted(p);
+                        const currentStep = getProjectCurrentStep(p);
+                        const bVal = parseFloat(p.budget) || 0;
+                        totalBudget += bVal;
+
+                        if (isDone) {
+                            completedCount++;
+                        } else {
+                            activeCount++;
+                        }
+
+                        assignedProjects.push({
+                            ...p,
+                            myRoles: rolesInThisProject,
+                            isDone: isDone,
+                            currentStep: currentStep
+                        });
+                    }
+                });
+
+                const totalProjects = assignedProjects.length;
+                const completionRate = totalProjects > 0 ? Math.round((completedCount / totalProjects) * 100) : 0;
+
+                // กำหนดระดับภาระงาน
+                let workloadLevel = 'zero';
+                let workloadLabel = '⚪ ไม่มีงาน';
+                if (totalProjects >= 6) {
+                    workloadLevel = 'high';
+                    workloadLabel = '🔴 ภาระงานสูง';
+                } else if (totalProjects >= 3) {
+                    workloadLevel = 'medium';
+                    workloadLabel = '🟡 ภาระงานปานกลาง';
+                } else if (totalProjects > 0) {
+                    workloadLevel = 'low';
+                    workloadLabel = '🟢 ภาระงานปกติ';
+                }
+
+                // สกัดตัวย่อชื่อสำหรับ Avatar
+                const nameParts = name.split(' ').filter(Boolean);
+                let initials = name.slice(0, 2);
+                if (nameParts.length >= 2) {
+                    initials = nameParts[0].charAt(0) + nameParts[1].charAt(0);
+                }
+
+                return {
+                    name: name,
+                    initials: initials,
+                    avatarGradient: AVATAR_GRADIENTS[index % AVATAR_GRADIENTS.length],
+                    totalProjects: totalProjects,
+                    activeCount: activeCount,
+                    completedCount: completedCount,
+                    completionRate: completionRate,
+                    totalBudget: totalBudget,
+                    workloadLevel: workloadLevel,
+                    workloadLabel: workloadLabel,
+                    roleCount: roleCount,
+                    projects: assignedProjects
+                };
+            });
+        }
+
+        // 5. Render Top KPI Summary Cards
+        function renderTopKPICards() {
+            const totalStaff = staffWorkloads.length;
+            const staffWithJobs = staffWorkloads.filter(s => s.totalProjects > 0).length;
+            document.getElementById('kpiTotalStaff').innerText = `${totalStaff} ท่าน`;
+            document.getElementById('kpiStaffActive').innerText = `มีงานรับผิดชอบ ${staffWithJobs} ท่าน / ว่าง ${totalStaff - staffWithJobs} ท่าน`;
+
+            let totalCompleted = 0;
+            let totalActive = 0;
+            let overallBudget = 0;
+
+            allProjects.forEach(p => {
+                if (isProjectCompleted(p)) {
+                    totalCompleted++;
+                } else {
+                    totalActive++;
+                }
+                overallBudget += (parseFloat(p.budget) || 0);
+            });
+
+            const overallRate = allProjects.length > 0 ? Math.round((totalCompleted / allProjects.length) * 100) : 0;
+
+            document.getElementById('kpiActiveProjects').innerText = `${totalActive} งาน`;
+            document.getElementById('kpiActiveRate').innerText = `คิดเป็น ${100 - overallRate}% ของโครงการทั้งหมด`;
+
+            document.getElementById('kpiCompletedProjects').innerText = `${totalCompleted} งาน`;
+            document.getElementById('kpiCompletedRate').innerText = `อัตราความสำเร็จภาพรวม ${overallRate}%`;
+
+            document.getElementById('kpiTotalBudget').innerText = overallBudget.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿';
+            document.getElementById('kpiProjectCount').innerText = `จากทั้งหมด ${allProjects.length} โครงการ`;
+        }
+
+        // 6. Filter & Render Staff Cards Grid
+        function filterStaffCards() {
+            const searchTerm = document.getElementById('staffSearchInput').value.trim().toLowerCase();
+            const roleFilter = document.getElementById('roleFilter').value;
+            const workloadFilter = document.getElementById('workloadFilter').value;
+            const sortFilter = document.getElementById('sortFilter').value;
+
+            let filtered = staffWorkloads.filter(staff => {
+                // ค้นหาตามชื่อเจ้าหน้าที่ หรือ ชื่อโครงการที่คนนี้รับผิดชอบ
+                let matchSearch = true;
+                if (searchTerm) {
+                    const matchName = staff.name.toLowerCase().includes(searchTerm);
+                    const matchProject = staff.projects.some(p => (p.name || '').toLowerCase().includes(searchTerm));
+                    matchSearch = matchName || matchProject;
+                }
+
+                // กรองตามบทบาทหน้าที่
+                let matchRole = true;
+                if (roleFilter !== 'all') {
+                    matchRole = staff.roleCount[roleFilter] > 0;
+                }
+
+                // กรองตามระดับภาระงาน
+                let matchWorkload = true;
+                if (workloadFilter !== 'all') {
+                    matchWorkload = staff.workloadLevel === workloadFilter;
+                }
+
+                return matchSearch && matchRole && matchWorkload;
+            });
+
+            // การเรียงลำดับ
+            if (sortFilter === 'projects_desc') {
+                filtered.sort((a, b) => b.totalProjects - a.totalProjects);
+            } else if (sortFilter === 'projects_asc') {
+                filtered.sort((a, b) => a.totalProjects - b.totalProjects);
+            } else if (sortFilter === 'budget_desc') {
+                filtered.sort((a, b) => b.totalBudget - a.totalBudget);
+            } else if (sortFilter === 'name_asc') {
+                filtered.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+            }
+
+            document.getElementById('staffCountDisplay').innerText = filtered.length;
+
+            const grid = document.getElementById('staffCardsGrid');
+            grid.innerHTML = '';
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div style="grid-column: 1 / -1; background: var(--card-bg); padding: 3rem; text-align: center; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+                        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+                        <h3 style="color: var(--text-main); margin-bottom: 0.3rem;">ไม่พบข้อมูลเจ้าหน้าที่ตามเงื่อนไขที่ค้นหา</h3>
+                        <p style="color: var(--text-muted); font-size: 0.88rem;">ลองปรับเปลี่ยนตัวกรอง หรือ คำค้นหาใหม่</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(staff => {
+                const card = document.createElement('div');
+                card.className = 'staff-card';
+
+                const budgetDisplay = staff.totalBudget >= 1000000 
+                    ? (staff.totalBudget / 1000000).toFixed(2) + ' ล้านบาท'
+                    : staff.totalBudget.toLocaleString('th-TH', { maximumFractionDigits: 0 }) + ' บาท';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="staff-card-header">
+                            <div class="staff-profile">
+                                <div class="staff-avatar" style="background: ${staff.avatarGradient};">
+                                    ${staff.initials}
+                                </div>
+                                <div class="staff-details">
+                                    <h3>${staff.name}</h3>
+                                    <p>เจ้าหน้าที่สำนักช่าง เทศบาลนครระยอง</p>
+                                </div>
+                            </div>
+                            <span class="workload-badge badge-${staff.workloadLevel}">
+                                ${staff.workloadLabel}
+                            </span>
+                        </div>
+
+                        <div class="staff-stats-row">
+                            <div class="stat-item">
+                                <div class="stat-num">${staff.totalProjects}</div>
+                                <div class="stat-label">โครงการทั้งหมด</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-num" style="color: var(--amber);">${staff.activeCount}</div>
+                                <div class="stat-label">กำลังดำเนินการ</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-num" style="color: var(--success);">${staff.completedCount}</div>
+                                <div class="stat-label">แล้วเสร็จ</div>
+                            </div>
+                        </div>
+
+                        <div class="kpi-progress-container">
+                            <div class="kpi-progress-header">
+                                <span>อัตราความสำเร็จของงาน (KPI)</span>
+                                <strong style="color: var(--text-main);">${staff.completionRate}%</strong>
+                            </div>
+                            <div class="kpi-progress-bar">
+                                <div class="kpi-progress-fill" style="width: ${staff.completionRate}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="role-pills">
+                            ${staff.roleCount.surveyor > 0 ? `<div class="role-pill">🔍 สำรวจ: <strong>${staff.roleCount.surveyor}</strong></div>` : ''}
+                            ${staff.roleCount.designer > 0 ? `<div class="role-pill">📐 ออกแบบ: <strong>${staff.roleCount.designer}</strong></div>` : ''}
+                            ${staff.roleCount.draftsman > 0 ? `<div class="role-pill">✍️ เขียนแบบ: <strong>${staff.roleCount.draftsman}</strong></div>` : ''}
+                            ${staff.roleCount.estimator > 0 ? `<div class="role-pill">🏷️ ประมาณราคา: <strong>${staff.roleCount.estimator}</strong></div>` : ''}
+                        </div>
+
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.2rem; display: flex; justify-content: space-between;">
+                            <span>งบประมาณที่ดูแล:</span>
+                            <strong style="color: var(--text-main);">${budgetDisplay}</strong>
+                        </div>
+                    </div>
+
+                    <button class="view-workload-btn" onclick="openStaffModal('${staff.name}')">
+                        <span>ดูโครงการในความรับผิดชอบ (${staff.totalProjects} งาน)</span>
+                        <span>→</span>
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // 7. Drill-Down Modal Logic
+        function openStaffModal(staffName) {
+            const staff = staffWorkloads.find(s => s.name === staffName);
+            if (!staff) return;
+
+            currentModalStaff = staff;
+            currentModalFilter = 'all';
+
+            document.getElementById('modalStaffName').innerText = staff.name;
+            document.getElementById('modalStaffAvatar').innerText = staff.initials;
+            document.getElementById('modalStaffAvatar').style.background = staff.avatarGradient;
+
+            const bDisplay = staff.totalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('modalStaffRoleSummary').innerText = 
+                `ภาระงานทั้งหมด: ${staff.totalProjects} โครงการ | แล้วเสร็จ: ${staff.completedCount} โครงการ (KPI ${staff.completionRate}%) | งบประมาณรวม: ${bDisplay} บาท`;
+
+            document.getElementById('modalTabAllCount').innerText = staff.totalProjects;
+            document.getElementById('modalTabActiveCount').innerText = staff.activeCount;
+            document.getElementById('modalTabCompletedCount').innerText = staff.completedCount;
+
+            setModalTab('all');
+            document.getElementById('staffModal').style.display = 'flex';
+        }
+
+        function closeStaffModal() {
+            document.getElementById('staffModal').style.display = 'none';
+        }
+
+        function setModalTab(tabKey) {
+            currentModalFilter = tabKey;
+            document.getElementById('modalTabAll').classList.remove('active');
+            document.getElementById('modalTabActive').classList.remove('active');
+            document.getElementById('modalTabCompleted').classList.remove('active');
+
+            if (tabKey === 'all') document.getElementById('modalTabAll').classList.add('active');
+            if (tabKey === 'active') document.getElementById('modalTabActive').classList.add('active');
+            if (tabKey === 'completed') document.getElementById('modalTabCompleted').classList.add('active');
+
+            renderModalProjectsList();
+        }
+
+        function renderModalProjectsList() {
+            const listContainer = document.getElementById('modalProjectsList');
+            listContainer.innerHTML = '';
+
+            if (!currentModalStaff) return;
+
+            let projects = currentModalStaff.projects;
+            if (currentModalFilter === 'active') {
+                projects = projects.filter(p => !p.isDone);
+            } else if (currentModalFilter === 'completed') {
+                projects = projects.filter(p => p.isDone);
+            }
+
+            if (projects.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+                        ไม่มีรายการโครงการในหมวดหมู่นี้
+                    </div>
+                `;
+                return;
+            }
+
+            projects.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'modal-project-card';
+
+                const bDisplay = (parseFloat(p.budget) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const currentStep = p.currentStep; // 0 to 6
+                const currentStepName = currentStep >= 0 ? STEPS[currentStep] : 'ยังไม่ระบุขั้นตอน';
+
+                // สเต็ปบาร์จำลอง 7 สเต็ป
+                let stepperHtml = '';
+                for (let i = 0; i < 7; i++) {
+                    let dotClass = 'stepper-dot';
+                    if (i < currentStep) dotClass += ' active';
+                    else if (i === currentStep) dotClass += p.isDone ? ' active' : ' current';
+                    stepperHtml += `<div class="${dotClass}" title="${STEPS[i]}"></div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="project-card-top">
+                        <div>
+                            <span class="project-id-badge">ลำดับที่ ${p.id}</span>
+                            ${p.operation_status ? `<span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: rgba(148, 163, 184, 0.15); color: var(--text-main); font-weight: 500; margin-left: 0.3rem;">${p.operation_status}</span>` : ''}
+                            <h4 class="project-title-text" style="margin-top: 0.3rem;">${p.name}</h4>
+                        </div>
+                        <div class="project-budget-tag">
+                            <div class="b-amt">${bDisplay} ฿</div>
+                            <div class="b-yr">${p.budget_year ? 'ปี พ.ศ. ' + p.budget_year : ''}</div>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">
+                        บทบาทในโครงการนี้:
+                    </div>
+                    <div class="role-tags-container">
+                        ${p.myRoles.map(r => `<span class="role-tag-item">👤 ${r}</span>`).join('')}
+                    </div>
+
+                    <div class="stepper-mini">
+                        ${stepperHtml}
+                    </div>
+                    <div class="stepper-caption">
+                        <span>สถานะขั้นตอน: <strong>${currentStepName}</strong></span>
+                        <span>${p.isDone ? '✅ ดำเนินการแล้วเสร็จ' : '⏳ กำลังดำเนินการ'}</span>
+                    </div>
+
+                    ${p.remark ? `
+                        <div style="margin-top: 0.75rem; padding: 0.6rem 0.8rem; background: rgba(2, 132, 199, 0.05); border-left: 3px solid var(--primary); border-radius: 4px; font-size: 0.82rem; color: var(--text-muted);">
+                            <strong>หมายเหตุ:</strong> ${p.remark}
+                        </div>
+                    ` : ''}
+                `;
+
+                listContainer.appendChild(card);
+            });
+        }
+
+        // 8. Render KPI Analytics Ranking Table
+        function renderAnalyticsTable() {
+            const tbody = document.getElementById('analyticsTableBody');
+            tbody.innerHTML = '';
+
+            const sorted = [...staffWorkloads].sort((a, b) => b.totalProjects - a.totalProjects);
+
+            sorted.forEach((staff, idx) => {
+                const tr = document.createElement('tr');
+                const bDisplay = staff.totalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                tr.innerHTML = `
+                    <td style="font-weight: 600; color: var(--text-muted);">${idx + 1}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: ${staff.avatarGradient}; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700;">
+                                ${staff.initials}
+                            </div>
+                            <strong style="color: var(--text-main);">${staff.name}</strong>
+                        </div>
+                    </td>
+                    <td><strong>${staff.totalProjects}</strong> โครงการ</td>
+                    <td style="color: var(--warning); font-weight: 600;">${staff.activeCount} โครงการ</td>
+                    <td style="color: var(--success); font-weight: 600;">${staff.completedCount} โครงการ</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="flex-grow: 1; height: 6px; background: rgba(148,163,184,0.2); border-radius: 4px; width: 60px;">
+                                <div style="width: ${staff.completionRate}%; height: 100%; background: var(--success); border-radius: 4px;"></div>
+                            </div>
+                            <span>${staff.completionRate}%</span>
+                        </div>
+                    </td>
+                    <td>${bDisplay} ฿</td>
+                    <td><span class="workload-badge badge-${staff.workloadLevel}">${staff.workloadLabel}</span></td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 9. Render All Projects Table
+        function renderAllProjectsTable() {
+            const tbody = document.getElementById('allProjectsTableBody');
+            tbody.innerHTML = '';
+
+            document.getElementById('allProjectsCount').innerText = allProjects.length;
+
+            allProjects.forEach(p => {
+                const tr = document.createElement('tr');
+                const bDisplay = (parseFloat(p.budget) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const currentStep = getProjectCurrentStep(p);
+                const stepName = currentStep >= 0 ? `${currentStep + 1}. ${STEPS[currentStep]}` : 'ยังไม่ระบุ';
+
+                const teamMembers = [];
+                if (p.surveyor) teamMembers.push(`สำรวจ: ${p.surveyor}`);
+                if (p.designer) teamMembers.push(`ออกแบบ: ${p.designer}`);
+                if (p.draftsman) teamMembers.push(`เขียนแบบ: ${p.draftsman}`);
+                if (p.estimator) teamMembers.push(`ประมาณราคา: ${p.estimator}`);
+
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: var(--primary);">#${p.id}</td>
+                    <td><strong>${p.name}</strong></td>
+                    <td style="white-space: nowrap;">${bDisplay} ฿</td>
+                    <td><span style="font-size: 0.78rem; padding: 0.2rem 0.5rem; border-radius: 6px; background: var(--bg); border: 1px solid var(--border);">${p.operation_status || '-'}</span></td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                        ${teamMembers.length > 0 ? teamMembers.join('<br>') : '-'}
+                    </td>
+                    <td><span style="font-size: 0.78rem; font-weight: 600; color: var(--primary);">${stepName}</span></td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Close modal on click outside
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('staffModal');
+            if (e.target === modal) {
+                closeStaffModal();
+            }
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            if (checkAuth()) {
+                initDashboard();
+            }
+        });
+    </script>
+</body>
+</html>
