@@ -1029,6 +1029,65 @@
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
             : null;
 
+        // URL สำหรับ Google Sheet Web App Webhook (ใช้ซิงค์คู่ขนานลงชีตอัตโนมัติเมื่ออยู่บน Vercel)
+        const GOOGLE_SHEET_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwHYnLd-5llJa1U10SNAd0bQGNfzKjYIevn6GVz5x_QvJe7Y0l4oOhNr3KgjY4w7YgHxg/exec';
+
+        // ฟังก์ชันส่งข้อมูลสำรองคู่ขนานไปยัง Google Sheet แบบ Real-time
+        function syncToGoogleSheet(pin, payload) {
+            const syncPayload = {
+                id: payload.id,
+                name: payload.name,
+                budget: payload.budget,
+                budgetYear: payload.budget_year,
+                budgetType: payload.budget_type,
+                operationStatus: payload.operation_status,
+                team: {
+                    surveyor: payload.surveyor,
+                    designer: payload.designer,
+                    draftsman: payload.draftsman,
+                    estimator: payload.estimator
+                },
+                statusesText: [
+                    payload.step_1_date,
+                    payload.step_2_date,
+                    payload.step_3_date,
+                    payload.step_4_date,
+                    payload.step_5_date,
+                    payload.step_6_date,
+                    payload.step_7_date
+                ],
+                remark: payload.remark
+            };
+
+            // 1. หากรันภายใน Apps Script โดยตรง
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run.updateProject(pin, syncPayload);
+                console.log("Dual-Sync: สำรองข้อมูลผ่าน google.script.run สำเร็จ");
+                return;
+            }
+
+            // 2. หากรันบน Vercel หรือเซิร์ฟเวอร์ภายนอก ส่งผ่าน Web App Webhook (doPost)
+            if (GOOGLE_SHEET_WEBAPP_URL && GOOGLE_SHEET_WEBAPP_URL.includes('/exec') && !GOOGLE_SHEET_WEBAPP_URL.includes('ใส่DeploymentIDที่นี่')) {
+                fetch(GOOGLE_SHEET_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify({
+                        pin: pin,
+                        projectData: syncPayload
+                    })
+                }).then(() => {
+                    console.log("Dual-Sync: ส่งข้อมูลสำรองลง Google Sheet สำเร็จ");
+                }).catch(err => {
+                    console.warn("Dual-Sync Google Sheet Webhook ไม่สำเร็จ:", err);
+                });
+            } else {
+                console.warn("ยังไม่ได้ระบุ GOOGLE_SHEET_WEBAPP_URL ที่ถูกต้อง ข้อมูลจึงบันทึกลง Supabase เท่านั้น");
+            }
+        }
+
         // จัดการธีม (Dark/Light Mode)
         const savedTheme = localStorage.getItem('dashboard_theme') || 'light';
         document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1817,33 +1876,8 @@
                     await loadDashboardDataFromSupabase();
                     filterProjects();
 
-                    // ซิงค์ Google Sheet เบื้องหลังถ้าเปิดใน Google Apps Script
-                    if (typeof google !== 'undefined') {
-                        google.script.run.updateProject(pin, {
-                            id: projectPayload.id,
-                            name: projectPayload.name,
-                            budget: projectPayload.budget,
-                            budgetYear: projectPayload.budget_year,
-                            budgetType: projectPayload.budget_type,
-                            operationStatus: projectPayload.operation_status,
-                            team: {
-                                surveyor: projectPayload.surveyor,
-                                designer: projectPayload.designer,
-                                draftsman: projectPayload.draftsman,
-                                estimator: projectPayload.estimator
-                            },
-                            statusesText: [
-                                projectPayload.step_1_date,
-                                projectPayload.step_2_date,
-                                projectPayload.step_3_date,
-                                projectPayload.step_4_date,
-                                projectPayload.step_5_date,
-                                projectPayload.step_6_date,
-                                projectPayload.step_7_date
-                            ],
-                            remark: projectPayload.remark
-                        });
-                    }
+                    // ซิงค์ข้อมูลสำรองไปยัง Google Sheet ทันที (Dual-Sync Realtime)
+                    syncToGoogleSheet(pin, projectPayload);
                 } else if (typeof google !== 'undefined') {
                     // Fallback to Apps Script
                     google.script.run
