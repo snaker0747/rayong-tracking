@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard ติดตามโครงการสำนักช่าง</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root {
+            --primary-color: #059669; /* Emerald Green */
+            --primary-light: #10b981;
+            --primary-dark: #047857;
+            --bg-color: #e2e8f0;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --border-color: rgba(0, 0, 0, 0.08);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Prompt', sans-serif;
+        }
+        .filter-box {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            flex: 2;
+        }
+        .search-box input, .filter-box select {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            font-size: 1rem;
+            font-family: inherit;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        .filter-box select {
+            flex: 1;
+            min-width: 160px;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            cursor: pointer;
+        }
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #e0f2fe 0%, transparent 40%),
+                              radial-gradient(circle at bottom left, #dcfce7 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        /* Glassmorphism utility */
+        .glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+        header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .summary-card {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+        .summary-card h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .summary-card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+        .search-box input:focus, .filter-box select:focus {
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+        }
+        /* Project Cards */
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .project-card {
+            padding: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .project-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+        }
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            padding-bottom: 1rem;
+        }
+        .project-title {
+            flex: 1;
+        }
+        .project-id {
+            background: var(--primary-light);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 0.8rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+        .project-badge {
+            background: #e5e7eb;
+            color: #4b5563;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            margin-right: 0.8rem;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+        .project-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: block;
+        }
+        .project-budget {
+            text-align: right;
+        }
+        .budget-label {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+        .budget-amount {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .project-team {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            background: rgba(0,0,0,0.04);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .team-member span {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        .team-member strong {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+        /* Stepper */
+        .stepper-container {
+            width: 100%;
+            overflow-x: auto;
+            padding: 1rem 0;
+        }
+        .stepper {
+            display: flex;
+            justify-content: space-between;
+            min-width: 800px; /* Ensure steps don't squish too much */
+            position: relative;
+        }
+        .stepper::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            z-index: 1;
+            border-radius: 2px;
+        }
+        /* Progress Line */
+        .stepper-progress {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-light) 100%);
+            z-index: 2;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .step {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 12.5%; /* 100% / 8 steps */
+        }
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #9ca3af;
+            margin-bottom: 0.6rem;
+            transition: all 0.3s ease;
+        }
+        .step-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-align: center;
+            font-weight: 500;
+            max-width: 95%;
+            line-height: 1.3;
+        }
+        .step-date {
+            font-size: 0.85rem;
+            color: var(--primary-dark);
+            margin-top: 0.4rem;
+            font-weight: 600;
+            min-height: 12px;
+        }
+        /* Active and Completed Steps */
+        .step.completed .step-circle {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        .step.active .step-circle {
+            background: #f97316;
+            border-color: #f97316;
+            color: white;
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.2);
+            animation: pulse-orange 2s infinite;
+        }
+        .step.completed .step-label,
+        .step.active .step-label {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+        .spin-icon {
+            display: inline-block;
+            animation: spin 1.5s linear infinite;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        /* Loading */
+        #loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            color: var(--primary-color);
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(16, 185, 129, 0.2);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Responsive Setup */
+        .header-tools {
+            position: absolute;
+            right: 0;
+            top: 0;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .theme-btn, .print-btn, .login-btn, .add-project-btn {
+            position: relative !important;
+            right: auto !important;
+            top: auto !important;
+        }
+        .stepper-container::after {
+            content: '↔ เลื่อน ซ้าย-ขวา เพื่อดูขั้นตอนทั้งหมด';
+            display: none;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 0.5rem;
+            font-weight: 500;
+            width: 100%;
+        }
+        
+        @media (max-width: 1024px) {
+            .header-tools {
+                position: relative;
+                right: auto;
+                top: auto;
+                justify-content: center;
+                margin-bottom: 1.5rem;
+                width: 100%;
+            }
+            header h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 0.8rem; }
+            .summary-card .value {
+                font-size: 1.8rem;
+            }
+            .controls {
+                flex-direction: column;
+                gap: 0.8rem !important;
+                padding: 1rem !important;
+            }
+            .search-box, .filter-box, .filter-box select {
+                width: 100% !important;
+                flex: none !important;
+            }
+            .project-header { flex-direction: column; gap: 0.5rem; }
+            .project-budget { text-align: left; }
+            .stepper-container::after {
+                display: block;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .glass {
+                padding: 1rem !important;
+            }
+            #editModal > div.glass, #printModal > div.glass, #loginModal > div.glass {
+                padding: 1.2rem !important;
+                width: 95% !important;
+                max-height: 95vh !important;
+            }
+            .add-project-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        .theme-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .print-btn {
+            position: absolute;
+            right: 60px;
+            top: 0;
+            background: var(--primary-color);
+            border: none;
+            color: white;
+            padding: 0 1rem;
+            height: 44px;
+            border-radius: 22px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+        .print-btn:hover {
+            transform: translateY(-2px);
+            background: var(--primary-dark);
+        }
+        
+        .login-btn {
+            position: absolute;
+            right: 210px;
+            top: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0 1rem;
+            height: 44px;
+            border-radius: 22px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .add-project-btn {
+            position: absolute;
+            right: 360px;
+            top: 0;
+            background: #10b981;
+            border: none;
+            color: white;
+            padding: 0 1rem;
+            height: 44px;
+            border-radius: 22px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .add-project-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        /* Checkbox dropdown styling */
+        .checkbox-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .checkbox-dropdown label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+            margin-bottom: 0.2rem;
+        }
+        .checkbox-dropdown label:hover {
+            background: var(--border-color);
+        }
+        .checkbox-dropdown input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        /* Edit Button on Cards */
+        .edit-card-btn {
+            background: var(--primary-color);
+            border: none;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-left: 0.5rem;
+            font-family: inherit;
+        }
+        .edit-card-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Toast notification styling */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast-icon {
+            font-size: 1.2rem;
+        }
+
+        /* Pin Keypad */
+        .pin-keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.7rem;
+            max-width: 270px;
+            margin: 0 auto;
+        }
+        .pin-key {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: var(--shadow);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: inherit;
+        }
+        .pin-key:hover {
+            background: var(--border-color);
+            transform: translateY(-2px);
+        }
+        .pin-key:active {
+            transform: scale(0.95);
+            background: var(--primary-color);
+            color: white;
+        }
+        .pin-key.action {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+        .pin-key.action:active {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Print Media Queries */
+        @media print {
+            body {
+                background: white !important;
+                color: black;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .glass {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                background: white !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            .header-tools, .theme-btn, .print-btn, .login-btn, .add-project-btn, .controls, #loader, #printModal, #loginModal, #editModal, .edit-card-btn {
+                display: none !important;
+            }
+            .project-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin-bottom: 1rem;
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+            header h1 {
+                color: black !important;
+            }
+            .project-badge, .project-id {
+                border: 1px solid #aaa;
+            }
+            /* Expand grid for print */
+            .summary-grid {
+                grid-template-columns: repeat(3, 1fr) !important;
+            }
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --card-bg: rgba(31, 41, 55, 0.85);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        [data-theme="dark"] body {
+            background-image: radial-gradient(circle at top right, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+        }
+        [data-theme="dark"] .search-box input, [data-theme="dark"] .filter-box select {
+            background-color: rgba(31, 41, 55, 0.9);
+            color: var(--text-main);
+        }
+        [data-theme="dark"] .project-team {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        [data-theme="dark"] .step-circle {
+            background: #1f2937;
+            border-color: #374151;
+        }
+        [data-theme="dark"] .project-badge {
+            background: #374151;
+            color: #d1d5db;
+        }
+        [data-theme="dark"] .stepper::before {
+            background: #374151;
+        }
+        
+        [data-theme="dark"] .step.completed .step-circle {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        [data-theme="dark"] .step.active .step-circle {
+            background: #f97316;
+            border-color: #f97316;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Print Options Modal -->
+    <div id="printModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="glass" style="width: 90%; max-width: 500px; padding: 2rem; position: relative;">
+            <h2 style="margin-bottom: 1.5rem; color: var(--text-main);">🖨️ เลือกข้อมูลที่ต้องการพิมพ์</h2>
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">ปีงบประมาณ</label>
+                <select id="printYearFilter" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                    <option value="all">ทุกปีงบประมาณ</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">ประเภทงบประมาณ</label>
+                <select id="printTypeFilter" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                    <option value="all">ทุกประเภทงบประมาณ</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">การดำเนินงาน</label>
+                <select id="printOperationStatusFilter" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                    <option value="all">ทุกการดำเนินงาน</option>
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">ขั้นตอนปัจจุบัน</label>
+                <select id="printStatusFilter" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                    <option value="all">ทุกสถานะ</option>
+                    <option value="not_started">ยังไม่เริ่มดำเนินการ</option>
+                    <option value="0">แบบรูปรายการและแบบแปลน</option>
+                    <option value="1">ขอความเห็นชอบรูปแบบ/eGP</option>
+                    <option value="2">คกก.จัดทำราคากลาง</option>
+                    <option value="3">ขอความเห็นชอบราคากลาง</option>
+                    <option value="4">ขออนุมัติจ้าง</option>
+                    <option value="5">สัญญา</option>
+                    <option value="6">ดำเนินการแล้วเสร็จ</option>
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="closePrintModal()" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); cursor: pointer; font-weight: 500; font-family: inherit;">ยกเลิก</button>
+                <button onclick="executePrint()" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: none; background: var(--primary-color); color: white; cursor: pointer; font-weight: 500; font-family: inherit;">🖨️ สร้างรายงาน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="glass" style="width: 90%; max-width: 360px; padding: 1.8rem 1.5rem; position: relative; text-align: center; border-radius: 20px;">
+            <h2 style="margin-bottom: 1.2rem; color: var(--text-main); font-size: 1.4rem;">🔑 เข้าสู่ระบบเจ้าหน้าที่</h2>
+            <div style="margin-bottom: 1.2rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">กรอกรหัส PIN (6 หลัก)</label>
+                <input type="password" id="pinInput" placeholder="● ● ● ● ● ●" maxlength="6" readonly style="width: 100%; padding: 0.7rem 0.5rem; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; font-size: 1.6rem; letter-spacing: 0.4rem; text-align: center; box-sizing: border-box; cursor: default;">
+            </div>
+            
+            <!-- Pin Keypad (Numpad) -->
+            <div class="pin-keypad">
+                <button type="button" class="pin-key" onclick="pressPin('1')">1</button>
+                <button type="button" class="pin-key" onclick="pressPin('2')">2</button>
+                <button type="button" class="pin-key" onclick="pressPin('3')">3</button>
+                <button type="button" class="pin-key" onclick="pressPin('4')">4</button>
+                <button type="button" class="pin-key" onclick="pressPin('5')">5</button>
+                <button type="button" class="pin-key" onclick="pressPin('6')">6</button>
+                <button type="button" class="pin-key" onclick="pressPin('7')">7</button>
+                <button type="button" class="pin-key" onclick="pressPin('8')">8</button>
+                <button type="button" class="pin-key" onclick="pressPin('9')">9</button>
+                <button type="button" class="pin-key action" onclick="clearPin()" title="ล้างทั้งหมด">C</button>
+                <button type="button" class="pin-key" onclick="pressPin('0')">0</button>
+                <button type="button" class="pin-key action" onclick="backspacePin()" title="ลบ">⌫</button>
+            </div>
+
+            <div style="display: flex; gap: 0.8rem; justify-content: center; margin-top: 1.2rem;">
+                <button type="button" onclick="closeLoginModal()" style="flex: 1; padding: 0.8rem; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); cursor: pointer; font-weight: 500; font-family: inherit;">ยกเลิก</button>
+                <button type="button" onclick="submitLogin()" style="flex: 1; padding: 0.8rem; border-radius: 10px; border: none; background: var(--primary-color); color: white; cursor: pointer; font-weight: 500; font-family: inherit;">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div class="glass" style="width: 90%; max-width: 600px; padding: 2rem; position: relative; max-height: 90vh; overflow-y: auto; box-sizing: border-box; text-align: left;">
+            <h2 id="editModalTitle" style="margin-bottom: 1.5rem; color: var(--text-main); margin-top: 0;">✏️ แก้ไขข้อมูลโครงการ</h2>
+            
+            <input type="hidden" id="editProjectId">
+            
+            <!-- Basic Info -->
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">ชื่อรายการ / โครงการ</label>
+                <input type="text" id="editProjectName" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box;">
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">งบประมาณ (บาท)</label>
+                    <input type="number" step="0.01" id="editProjectBudget" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box;">
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">ปี พ.ศ. (เช่น 2567)</label>
+                    <input type="text" id="editProjectBudgetYear" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">ประเภทรายจ่าย</label>
+                    <select id="editProjectBudgetType" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box;">
+                        <option value="">(ไม่มี)</option>
+                    </select>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">การดำเนินงาน</label>
+                    <select id="editProjectOperationStatus" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box;">
+                        <option value="">(ไม่มี)</option>
+                        <option value="สำรวจออกแบบ">สำรวจออกแบบ</option>
+                        <option value="จัดทำราคากลาง">จัดทำราคากลาง</option>
+                        <option value="บริหารสัญญา">บริหารสัญญา</option>
+                        <option value="เบิกจ่ายแล้วเสร็จ">เบิกจ่ายแล้วเสร็จ</option>
+                        <option value="ดำเนินการแล้วเสร็จ">ดำเนินการแล้วเสร็จ</option>
+                        <option value="ยกเลิกโครงการ">ยกเลิกโครงการ</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Team Info -->
+            <h3 style="margin: 1.5rem 0 0.8rem 0; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">👥 ผู้รับผิดชอบ</h3>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">ผู้สำรวจ</label>
+                    <div class="multi-select-container" id="containerTeamSurveyor" style="position: relative;">
+                        <input type="text" id="editTeamSurveyor" placeholder="คลิกเพื่อเลือกรายชื่อ..." style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box; cursor: pointer;">
+                        <div class="checkbox-dropdown glass" id="dropdownTeamSurveyor"></div>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">ออกแบบ</label>
+                    <div class="multi-select-container" id="containerTeamDesigner" style="position: relative;">
+                        <input type="text" id="editTeamDesigner" placeholder="คลิกเพื่อเลือกรายชื่อ..." style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box; cursor: pointer;">
+                        <div class="checkbox-dropdown glass" id="dropdownTeamDesigner"></div>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">เขียนแบบ</label>
+                    <div class="multi-select-container" id="containerTeamDraftsman" style="position: relative;">
+                        <input type="text" id="editTeamDraftsman" placeholder="คลิกเพื่อเลือกรายชื่อ..." style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box; cursor: pointer;">
+                        <div class="checkbox-dropdown glass" id="dropdownTeamDraftsman"></div>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">ประมาณราคา</label>
+                    <div class="multi-select-container" id="containerTeamEstimator" style="position: relative;">
+                        <input type="text" id="editTeamEstimator" placeholder="คลิกเพื่อเลือกรายชื่อ..." style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box; cursor: pointer;">
+                        <div class="checkbox-dropdown glass" id="dropdownTeamEstimator"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Steps Dates -->
+            <h3 style="margin: 1.5rem 0 0.8rem 0; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">📅 วันที่บันทึกขั้นตอนการดำเนินงาน</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; margin-top: 0;">* บันทึกวันที่โดยเลือกจากปฏิทิน</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep0" style="width: 200px; font-weight: 500; color: var(--text-main);">1. แบบรูปรายการและแบบแปลน:</label>
+                    <input type="date" id="editDateStep0" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep1" style="width: 200px; font-weight: 500; color: var(--text-main);">2. ขอความเห็นชอบรูปแบบ/eGP:</label>
+                    <input type="date" id="editDateStep1" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep2" style="width: 200px; font-weight: 500; color: var(--text-main);">3. คกก.จัดทำราคากลาง:</label>
+                    <input type="date" id="editDateStep2" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep3" style="width: 200px; font-weight: 500; color: var(--text-main);">4. ขอความเห็นชอบราคากลาง:</label>
+                    <input type="date" id="editDateStep3" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep4" style="width: 200px; font-weight: 500; color: var(--text-main);">5. ขออนุมัติจ้าง:</label>
+                    <input type="date" id="editDateStep4" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep5" style="width: 200px; font-weight: 500; color: var(--text-main);">6. สัญญา:</label>
+                    <input type="date" id="editDateStep5" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <label id="labelStep6" style="width: 200px; font-weight: 500; color: var(--text-main);">7. ดำเนินการแล้วเสร็จ:</label>
+                    <input type="date" id="editDateStep6" style="flex: 1; min-width: 150px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit;">
+                </div>
+            </div>
+            
+            <!-- Remark -->
+            <div style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.3rem; color: var(--text-main); font-weight: 500;">หมายเหตุ</label>
+                <textarea id="editProjectRemark" rows="3" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); font-family: inherit; box-sizing: border-box; resize: vertical;"></textarea>
+            </div>
+            
+            <!-- Actions -->
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <button onclick="closeEditModal()" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-main); cursor: pointer; font-weight: 500; font-family: inherit;">ยกเลิก</button>
+                <button onclick="submitEdit()" id="saveEditBtn" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: none; background: var(--primary-color); color: white; cursor: pointer; font-weight: 500; font-family: inherit; display: flex; align-items: center; gap: 0.5rem;">💾 บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <header style="position: relative;">
+        <div class="header-tools">
+            <button id="addProjectBtn" onclick="openAddModal()" class="add-project-btn" style="display: none;" title="เพิ่มโครงการใหม่">➕ เพิ่มโครงการใหม่</button>
+            <button id="loginToggleBtn" onclick="toggleLogin()" class="login-btn" title="เข้าสู่ระบบ">🔑 เข้าสู่ระบบ</button>
+            <button onclick="openPrintModal()" class="print-btn" title="พิมพ์รายงานเป็น PDF">🖨️ พิมพ์รายงาน</button>
+            <button id="themeToggle" class="theme-btn" title="เปลี่ยนธีม">🌙</button>
+        </div>
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <img src="https://drive.google.com/thumbnail?id=10sQCt0_O4dIjq_2sZvPEhPXwDGbv9idm&sz=w500" alt="โลโก้สำนักช่าง เทศบาลนครระยอง" style="width: 120px; height: 120px; object-fit: cover; border-radius: 50%; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border: 4px solid white; background-color: white;">
+        </div>
+        <h1>ระบบติดตามโครงการ</h1>
+        <p>สำนักช่าง เทศบาลนครระยอง</p>
+    </header>
+    <div id="app">
+        <!-- Loader -->
+        <div id="loader" class="glass">
+            <div class="spinner"></div>
+            <h3>กำลังโหลดข้อมูลจากระบบ...</h3>
+        </div>
+        <div id="dashboard-content" style="display: none;">
+            <!-- Summary -->
+            <div class="summary-grid">
+                <div class="summary-card glass">
+                    <h3>จำนวนโครงการทั้งหมด</h3>
+                    <div class="value" id="total-projects">0</div>
+                </div>
+                <div class="summary-card glass">
+                    <h3>รวมงบประมาณ (บาท)</h3>
+                    <div class="value" id="total-budget">0.00</div>
+                </div>
+                <div class="summary-card glass">
+                    <h3>โครงการที่เสร็จสิ้นแล้ว</h3>
+                    <div class="value" id="completed-projects">0</div>
+                </div>
+            </div>
+            <!-- Controls -->
+            <div class="controls">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="ค้นหาชื่อโครงการ หรือ ผู้รับผิดชอบ...">
+                </div>
+                <div class="filter-box">
+                    <select id="yearFilter">
+                        <option value="all">ทุกปีงบประมาณ</option>
+                    </select>
+                    <select id="budgetTypeFilter">
+                        <option value="all">ทุกประเภทงบประมาณ</option>
+                    </select>
+                    <select id="operationStatusFilter">
+                        <option value="all">ทุกการดำเนินงาน</option>
+                    </select>
+                    <select id="statusFilter">
+                        <option value="all">ทุกขั้นตอน</option>
+                        <option value="not_started">ยังไม่เริ่มดำเนินการ</option>
+                        <option value="0">แบบรูปรายการและแบบแปลน</option>
+                        <option value="1">ขอความเห็นชอบรูปแบบ/eGP</option>
+                        <option value="2">คกก.จัดทำราคากลาง</option>
+                        <option value="3">ขอความเห็นชอบราคากลาง</option>
+                        <option value="4">ขออนุมัติจ้าง</option>
+                        <option value="5">สัญญา</option>
+                        <option value="6">ดำเนินการแล้วเสร็จ</option>
+                    </select>
+                </div>
+            </div>
+            <!-- List -->
+            <div class="project-list" id="projectList">
+                <!-- Project Cards will be injected here -->
+            </div>
+        </div>
+    </div>
+    <script>
+        let STEPS = [
+            "แบบรูปรายการและแบบแปลน",
+            "ขอความเห็นชอบรูปแบบ/eGP",
+            "คกก.จัดทำราคากลาง",
+            "ขอความเห็นชอบราคากลาง",
+            "ขออนุมัติจ้าง",
+            "สัญญา",
+            "ดำเนินการแล้วเสร็จ"
+        ];
+        let allProjects = [];
+        let isAdminLoggedIn = false;
+        let adminPinCode = '';
+
+        // การตั้งค่าการเชื่อมต่อ Supabase
+        const SUPABASE_URL = 'https://awfenzwfywelxmnnalva.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_ZadcQEz6xuirM1CT9HGSTw_D1Cw0xdS';
+        const supabaseClient = (typeof window !== 'undefined' && window.supabase) 
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+            : null;
+
+        // จัดการธีม (Dark/Light Mode)
+        const savedTheme = localStorage.getItem('dashboard_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // ฟังก์ชันเริ่มต้น ดึงข้อมูลเมื่อโหลดหน้าเว็บ
+        document.addEventListener("DOMContentLoaded", () => {
+            const themeBtn = document.getElementById('themeToggle');
+            themeBtn.innerText = savedTheme === 'dark' ? '☀️' : '🌙';
+            themeBtn.addEventListener('click', () => {
+                let currentTheme = document.documentElement.getAttribute('data-theme');
+                let newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('dashboard_theme', newTheme);
+                
+                themeBtn.innerText = newTheme === 'dark' ? '☀️' : '🌙';
+            });
+
+            // ดึงข้อมูลผ่าน Supabase เป็นหลัก
+            loadDashboardDataFromSupabase();
+        });
+
+        async function loadDashboardDataFromSupabase() {
+            try {
+                if (!supabaseClient) {
+                    throw new Error("ไม่พบ Supabase Client");
+                }
+
+                // 1. ดึงตัวเลือกดรอปดาวน์และชื่อขั้นตอน
+                const { data: optionsData, error: optError } = await supabaseClient
+                    .from('dropdown_options')
+                    .select('*')
+                    .order('sort_order', { ascending: true });
+
+                if (optError) throw optError;
+
+                const options = {
+                    budgetType: [],
+                    operationStatus: [],
+                    surveyor: [],
+                    designer: [],
+                    draftsman: [],
+                    estimator: []
+                };
+                const steps = [];
+
+                (optionsData || []).forEach(opt => {
+                    if (opt.category === 'team') {
+                        options.surveyor.push(opt.item_value);
+                        options.designer.push(opt.item_value);
+                        options.draftsman.push(opt.item_value);
+                        options.estimator.push(opt.item_value);
+                    } else if (opt.category === 'budget_type') {
+                        options.budgetType.push(opt.item_value);
+                    } else if (opt.category === 'operation_status') {
+                        options.operationStatus.push(opt.item_value);
+                    } else if (opt.category === 'step_name') {
+                        steps.push(opt.item_value);
+                    }
+                });
+
+                // 2. ดึงข้อมูลโครงการทั้งหมด
+                const { data: projectsData, error: projError } = await supabaseClient
+                    .from('projects')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (projError) throw projError;
+
+                const projects = (projectsData || []).map(row => {
+                    const rawStatuses = [
+                        row.step_1_date || '',
+                        row.step_2_date || '',
+                        row.step_3_date || '',
+                        row.step_4_date || '',
+                        row.step_5_date || '',
+                        row.step_6_date || '',
+                        row.step_7_date || ''
+                    ];
+
+                    let currentStatusIndex = -1;
+                    const statuses = rawStatuses.map((s, idx) => {
+                        const text = (s || '').trim();
+                        if (text !== '') {
+                            currentStatusIndex = idx;
+                        }
+                        return text;
+                    });
+
+                    const bVal = parseFloat(row.budget) || 0;
+                    const bDisplay = bVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                    return {
+                        id: row.id,
+                        name: row.name || '',
+                        budget: bVal,
+                        budgetDisplay: bDisplay,
+                        budgetYear: row.budget_year || '',
+                        budgetType: row.budget_type || '',
+                        operationStatus: row.operation_status || '',
+                        team: {
+                            surveyor: row.surveyor || '',
+                            designer: row.designer || '',
+                            draftsman: row.draftsman || '',
+                            estimator: row.estimator || ''
+                        },
+                        remark: row.remark || '',
+                        currentStatusIndex: currentStatusIndex,
+                        statusesText: statuses
+                    };
+                });
+
+                const responsePayload = {
+                    status: 'success',
+                    data: projects,
+                    steps: steps.length === 7 ? steps : [
+                        "แบบรูปรายการและแบบแปลน",
+                        "ขอความเห็นชอบรูปแบบ/e-GP",
+                        "คกก.จัดทำราคากลาง",
+                        "ขอความเห็นชอบราคากลาง",
+                        "ขออนุมัติจ้าง",
+                        "สัญญา",
+                        "แล้วเสร็จ"
+                    ],
+                    options: options
+                };
+
+                handleDataResponse(JSON.stringify(responsePayload));
+
+            } catch (err) {
+                console.error("Supabase load error, falling back to Apps Script:", err);
+                if (typeof google !== 'undefined') {
+                    google.script.run
+                        .withSuccessHandler(handleDataResponse)
+                        .withFailureHandler(onDataError)
+                        .getDashboardData();
+                } else {
+                    onDataError(err.message || err);
+                }
+            }
+        }
+        function onDataError(error) {
+            document.getElementById('loader').innerHTML = `<h3 style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</h3><p>${error}</p>`;
+        }
+        function handleDataResponse(responseStr) {
+            try {
+                const response = JSON.parse(responseStr);
+                if (response.status === 'success') {
+                    allProjects = response.data;
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('dashboard-content').style.display = 'block';
+                    
+                    // ซิงค์ชื่อขั้นตอน (STEPS) จากหัวคอลัมน์ใน Sheet
+                    if (response.steps && response.steps.length === 7) {
+                        STEPS = response.steps;
+                        
+                        // อัปเดตตัวกรองหน้าแรกและหน้าพิมพ์รายงาน
+                        updateStepFiltersUI();
+                        
+                        // อัปเดตป้ายชื่อของขั้นตอนในฟอร์มแก้ไขโครงการ
+                        updateEditModalStepsUI();
+                    }
+                    
+                    // ดึงข้อมูลปีงบประมาณและประเภทงบประมาณที่ไม่ซ้ำกัน
+                    const years = new Set();
+                    const types = new Set();
+                    const opStatuses = new Set();
+                    allProjects.forEach(p => {
+                        if (p.budgetYear) years.add(p.budgetYear);
+                        if (p.budgetType) types.add(p.budgetType);
+                        if (p.operationStatus) opStatuses.add(p.operationStatus);
+                    });
+                    
+                    const yearFilter = document.getElementById('yearFilter');
+                    const printYearFilter = document.getElementById('printYearFilter');
+                    Array.from(years).sort().reverse().forEach(year => {
+                        const option = document.createElement('option');
+                        option.value = year;
+                        option.textContent = `ปี พ.ศ. ${year}`;
+                        yearFilter.appendChild(option);
+                        printYearFilter.appendChild(option.cloneNode(true));
+                    });
+                    
+                    const typeFilter = document.getElementById('budgetTypeFilter');
+                    const printTypeFilter = document.getElementById('printTypeFilter');
+                    Array.from(types).sort().forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type;
+                        option.textContent = type;
+                        typeFilter.appendChild(option);
+                        printTypeFilter.appendChild(option.cloneNode(true));
+                    });
+                    
+                    const opStatusFilter = document.getElementById('operationStatusFilter');
+                    const printOpStatusFilter = document.getElementById('printOperationStatusFilter');
+                    Array.from(opStatuses).sort().forEach(op => {
+                        const option = document.createElement('option');
+                        option.value = op;
+                        option.textContent = op;
+                        opStatusFilter.appendChild(option);
+                        printOpStatusFilter.appendChild(option.cloneNode(true));
+                    });
+
+                    renderDashboard(allProjects);
+                    
+                    // ปรับแต่งตัวเลือกในฟอร์มแก้ไขข้อมูลโครงการให้ดึงตาม Dropdown ใน Sheet
+                    const editOpStatusSelect = document.getElementById('editProjectOperationStatus');
+                    if (editOpStatusSelect) {
+                        editOpStatusSelect.innerHTML = '<option value="">(ไม่มี)</option>';
+                        const optionsList = (response.options && response.options.operationStatus && response.options.operationStatus.length > 0)
+                            ? response.options.operationStatus
+                            : ["สำรวจออกแบบ", "จัดทำราคากลาง", "บริหารสัญญา", "เบิกจ่ายแล้วเสร็จ", "ดำเนินการแล้วเสร็จ", "ยกเลิกโครงการ"];
+                        
+                        optionsList.forEach(op => {
+                            const option = document.createElement('option');
+                            option.value = op;
+                            option.textContent = op;
+                            editOpStatusSelect.appendChild(option);
+                        });
+                    }
+                        if (response.options) {
+                            const editBudgetTypeSelect = document.getElementById('editProjectBudgetType');
+                            if (editBudgetTypeSelect) {
+                                editBudgetTypeSelect.innerHTML = '<option value="">(ไม่มี)</option>';
+                                const budgetTypeList = (response.options.budgetType && response.options.budgetType.length > 0)
+                                    ? response.options.budgetType
+                                    : ["รายจ่ายประจำปี", "รายจ่ายเพิ่มเติม", "รายจ่ายเพิ่มเติม ฉ.2", "จ่ายขาดเงินสะสม", "ไปตั้งจ่ายรายการใหม่"];
+                                
+                                budgetTypeList.forEach(type => {
+                                    const option = document.createElement('option');
+                                    option.value = type;
+                                    option.textContent = type;
+                                    editBudgetTypeSelect.appendChild(option);
+                                });
+                            }
+
+                            // รายชื่อผู้รับผิดชอบสำรอง ในกรณีที่ดึงจากชีตไม่สำเร็จ
+                            const defaultTeamNames = [
+                                "ภาณุทัศน์ อุปถัมภ์",
+                                "วันเพ็ญ เทพจร",
+                                "วรนิตย์ มณีนิล",
+                                "ธิติยา คนรักษา",
+                                "พงศ์กรณ์ วุฒิวรากภรณ์",
+                                "โชติ คำประไพ",
+                                "สุขุมาภรณ์ พงษ์ดี",
+                                "ชินโชติ คำประไพ",
+                                "เพชรวลี รัตนะ",
+                                "ปิยะ เพ็งเรื่อง",
+                                "ชนากานต์ วัฒนากูล",
+                                "ชัยฤทธิ์ ไชยโย",
+                                "ศิริพงษ์ วุฒิวรากภรณ์",
+                                "นริศรา เป้าระเบียบ"
+                            ];
+
+                            // ฟังก์ชันตั้งค่าดรอปดาวน์เลือกได้หลายคน (Multi-select checkbox dropdown)
+                            function setupMultiSelectDropdown(field, namesList) {
+                                const inputEl = document.getElementById('editTeam' + field);
+                                const dropdownEl = document.getElementById('dropdownTeam' + field);
+                                if (!inputEl || !dropdownEl) return;
+
+                                // 1. เติมตัวเลือกรายชื่อพร้อม checkbox
+                                dropdownEl.innerHTML = '';
+                                namesList.forEach(name => {
+                                    const label = document.createElement('label');
+                                    label.innerHTML = `<input type="checkbox" value="${name}" class="name-checkbox"> ${name}`;
+                                    dropdownEl.appendChild(label);
+                                });
+
+                                // 2. แสดง/ซ่อนดรอปดาวน์เมื่อคลิกช่องกรอกข้อมูล
+                                inputEl.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    document.querySelectorAll('.checkbox-dropdown').forEach(d => {
+                                        if (d !== dropdownEl) d.style.display = 'none';
+                                    });
+                                    dropdownEl.style.display = dropdownEl.style.display === 'block' ? 'none' : 'block';
+                                    syncCheckboxesFromInput();
+                                });
+
+                                dropdownEl.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                });
+
+                                // 3. อัปเดตรายชื่อในช่องพิมพ์เมื่อกดยกเลิก/ติ๊กถูก
+                                dropdownEl.addEventListener('change', function(e) {
+                                    if (e.target.classList.contains('name-checkbox')) {
+                                        const checkedCheckboxes = dropdownEl.querySelectorAll('.name-checkbox:checked');
+                                        const selectedNames = Array.from(checkedCheckboxes).map(cb => cb.value);
+                                        inputEl.value = selectedNames.join(', ');
+                                    }
+                                });
+
+                                // 4. ซิงค์สถานะ checkbox ตามคำที่พิมพ์
+                                inputEl.addEventListener('input', syncCheckboxesFromInput);
+
+                                function syncCheckboxesFromInput() {
+                                    const typedNames = inputEl.value.split(',').map(name => name.trim().toLowerCase());
+                                    const checkboxes = dropdownEl.querySelectorAll('.name-checkbox');
+                                    checkboxes.forEach(cb => {
+                                        cb.checked = typedNames.includes(cb.value.toLowerCase());
+                                    });
+                                }
+                            }
+
+                            // เพิ่มตัวเลือกให้กับช่อง ผู้สำรวจ, ออกแบบ, เขียนแบบ, ประมาณราคา
+                            const teamFields = ['Surveyor', 'Designer', 'Draftsman', 'Estimator'];
+                            teamFields.forEach(field => {
+                                const optionKey = field.toLowerCase();
+                                const namesList = (response.options && response.options[optionKey] && response.options[optionKey].length > 0)
+                                    ? response.options[optionKey]
+                                    : defaultTeamNames;
+                                
+                                setupMultiSelectDropdown(field, namesList);
+                            });
+                        }
+                    
+                    // Setup event listeners for search and filter
+                    document.getElementById('searchInput').addEventListener('input', filterProjects);
+                    document.getElementById('yearFilter').addEventListener('change', filterProjects);
+                    document.getElementById('budgetTypeFilter').addEventListener('change', filterProjects);
+                    document.getElementById('operationStatusFilter').addEventListener('change', filterProjects);
+                    document.getElementById('statusFilter').addEventListener('change', filterProjects);
+                } else {
+                    onDataError(response.message);
+                }
+            } catch(e) {
+                onDataError(e.toString());
+            }
+        }
+        function filterProjects() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusTerm = document.getElementById('statusFilter').value;
+            const opStatusTerm = document.getElementById('operationStatusFilter').value;
+            const yearTerm = document.getElementById('yearFilter').value;
+            const typeTerm = document.getElementById('budgetTypeFilter').value;
+            const filtered = allProjects.filter(p => {
+                // ค้นหาข้อความ
+                const matchSearch = p.name.toLowerCase().includes(searchTerm) || 
+                                   (p.team.surveyor && p.team.surveyor.toLowerCase().includes(searchTerm)) ||
+                                   (p.team.designer && p.team.designer.toLowerCase().includes(searchTerm)) ||
+                                   (p.team.draftsman && p.team.draftsman.toLowerCase().includes(searchTerm)) ||
+                                   (p.team.estimator && p.team.estimator.toLowerCase().includes(searchTerm));
+                
+                // กรองสถานะ
+                let matchStatus = true;
+                if (statusTerm === 'not_started') {
+                    matchStatus = p.currentStatusIndex === -1;
+                } else if (statusTerm !== 'all') {
+                    matchStatus = p.currentStatusIndex === parseInt(statusTerm);
+                }
+                // กรองปีงบประมาณ
+                let matchYear = true;
+                if (yearTerm !== 'all') {
+                    matchYear = p.budgetYear === yearTerm;
+                }
+                // กรองประเภทงบประมาณ
+                let matchType = true;
+                if (typeTerm !== 'all') {
+                    matchType = p.budgetType === typeTerm;
+                }
+                // กรองการดำเนินงาน
+                let matchOpStatus = true;
+                if (opStatusTerm !== 'all') {
+                    matchOpStatus = p.operationStatus === opStatusTerm;
+                }
+                return matchSearch && matchStatus && matchYear && matchType && matchOpStatus;
+            });
+            // เรียกใช้ renderDashboard เพื่ออัปเดตตัวเลข Summary ด้านบนด้วย
+            renderDashboard(filtered);
+        }
+
+        // --- Print Modal Logic ---
+        function openPrintModal() {
+            // ดึงค่า filter ปัจจุบันจากหน้าจอหลักมาแสดงเป็นค่าตั้งต้นใน Pop-up
+            document.getElementById('printYearFilter').value = document.getElementById('yearFilter').value;
+            document.getElementById('printTypeFilter').value = document.getElementById('budgetTypeFilter').value;
+            document.getElementById('printOperationStatusFilter').value = document.getElementById('operationStatusFilter').value;
+            document.getElementById('printStatusFilter').value = document.getElementById('statusFilter').value;
+            document.getElementById('printModal').style.display = 'flex';
+        }
+        
+        function closePrintModal() {
+            document.getElementById('printModal').style.display = 'none';
+        }
+        
+        function executePrint() {
+            // เอาค่าที่เลือกใน pop-up กลับไปอัปเดตที่หน้าจอหลัก
+            document.getElementById('yearFilter').value = document.getElementById('printYearFilter').value;
+            document.getElementById('budgetTypeFilter').value = document.getElementById('printTypeFilter').value;
+            document.getElementById('operationStatusFilter').value = document.getElementById('printOperationStatusFilter').value;
+            document.getElementById('statusFilter').value = document.getElementById('printStatusFilter').value;
+            
+            // ให้หน้าจอหลัก กรองข้อมูลตามค่าที่เลือกใหม่
+            filterProjects();
+            
+            // ปิด Modal
+            closePrintModal();
+            
+            // หน่วงเวลาเล็กน้อยเพื่อให้เบราว์เซอร์จัดการอัปเดต UI ก่อนเปิดหน้า Print
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+
+        function renderDashboard(projects) {
+            // Render Summaries
+            document.getElementById('total-projects').innerText = projects.length;
+            
+            const totalBudget = projects.reduce((sum, p) => sum + p.budget, 0);
+            document.getElementById('total-budget').innerText = totalBudget.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            const completed = projects.filter(p => p.currentStatusIndex === 6).length;
+            document.getElementById('completed-projects').innerText = completed;
+            // Render List
+            renderProjects(projects);
+        }
+        
+        function getOperationStatusStyle(status) {
+            const s = status.trim();
+            if (s === 'บริหารสัญญา') return 'background-color: #f9cb9c; color: #b45f06; font-size: 1.15rem;';
+            if (s === 'จัดทำราคากลาง') return 'background-color: #ffe599; color: #bf9000; font-size: 1.15rem;';
+            if (s === 'ยกเลิกโครงการ') return 'background-color: #e06666; color: white; font-size: 1.15rem;';
+            if (s === 'เบิกจ่ายแล้วเสร็จ') return 'background-color: #c9daf8; color: #1155cc; font-size: 1.15rem;';
+            if (s === 'สำรวจออกแบบ') return 'background-color: #ead1dc; color: #a64d79; font-size: 1.15rem;';
+            if (s === 'ดำเนินการแล้วเสร็จ') return 'background-color: #b6d7a8; color: #274e13; font-size: 1.15rem;';
+            return 'background-color: #e5e7eb; color: #374151; font-size: 1.15rem;'; // Default
+        }
+
+        function renderProjects(projects) {
+            const container = document.getElementById('projectList');
+            container.innerHTML = '';
+            
+            if (projects.length === 0) {
+                container.innerHTML = '<div class="glass" style="padding: 2rem; text-align: center; color: #6b7280;">ไม่พบข้อมูลโครงการที่ค้นหา</div>';
+                return;
+            }
+            projects.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'project-card glass';
+                
+                // Create Stepper HTML
+                let stepsHtml = '';
+                const currentIdx = p.currentStatusIndex;
+                
+                // Calculate Progress Bar Width
+                // if currentIdx = -1 -> 0%
+                // if currentIdx = 0 -> 0% (start)
+                // if currentIdx = 7 -> 100%
+                let progressPercentage = 0;
+                if (currentIdx >= 0) {
+                    progressPercentage = (currentIdx / (STEPS.length - 1)) * 100;
+                }
+                STEPS.forEach((stepName, index) => {
+                    let stepClass = 'step';
+                    const flagSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" style="margin-top:2px;">
+                        <rect x="4" y="4" width="4" height="4" fill="currentColor" />
+                        <rect x="12" y="4" width="4" height="4" fill="currentColor" />
+                        <rect x="8" y="8" width="4" height="4" fill="currentColor" />
+                        <rect x="16" y="8" width="4" height="4" fill="currentColor" />
+                        <rect x="4" y="12" width="4" height="4" fill="currentColor" />
+                        <rect x="12" y="12" width="4" height="4" fill="currentColor" />
+                        <rect x="4" y="4" width="16" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M4 2v20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>`;
+                    let icon = index === 6 ? flagSvg : (index + 1);
+                    
+                    if (index < currentIdx) {
+                        stepClass += ' completed';
+                        if (index !== 6) icon = '✓';
+                    } else if (index === currentIdx) {
+                        stepClass += ' active'; 
+                        if (index !== 6) icon = '<span class="spin-icon">↻</span>';
+                    }
+                    let statusNote = '';
+                    if (p.statusesText && p.statusesText[index]) {
+                        statusNote = p.statusesText[index];
+                    }
+                    stepsHtml += `
+                        <div class="${stepClass}">
+                            <div class="step-circle">${icon}</div>
+                            <div class="step-label">${stepName}</div>
+                            <div class="step-date" style="font-size: 0.8rem; color: #6b7280; margin-top: 6px; text-align: center; max-width: 95%; line-height: 1.2;">${statusNote}</div>
+                        </div>
+                    `;
+                });
+                const editButtonHtml = isAdminLoggedIn ? `<button class="edit-card-btn" onclick="openEditModal('${p.id}')">✏️ แก้ไข</button>` : '';
+
+                card.innerHTML = `
+                    <div class="project-header">
+                        <div class="project-title">
+                            <span class="project-id">ลำดับที่ ${p.id}</span>
+                            ${p.budgetType ? `<span class="project-badge">${p.budgetType}</span>` : ''}
+                            ${p.operationStatus ? `<span class="project-badge" style="${getOperationStatusStyle(p.operationStatus)} padding: 0.3rem 0.8rem; border-radius: 8px;">${p.operationStatus}</span>` : ''}
+                            ${editButtonHtml}
+                            <h3 class="project-name" style="margin-top: 0.3rem;">${p.name}</h3>
+                        </div>
+                        <div class="project-budget">
+                            <div class="budget-label">งบประมาณ ${p.budgetYear ? 'ปี พ.ศ. ' + p.budgetYear : ''}</div>
+                            <div class="budget-amount">${p.budgetDisplay} ฿</div>
+                        </div>
+                    </div>
+                    
+                    <div class="project-team">
+                        <div class="team-member"><span>ผู้สำรวจ:</span> <strong>${p.team.surveyor || '-'}</strong></div>
+                        <div class="team-member"><span>ออกแบบ:</span> <strong>${p.team.designer || '-'}</strong></div>
+                        <div class="team-member"><span>เขียนแบบ:</span> <strong>${p.team.draftsman || '-'}</strong></div>
+                        <div class="team-member"><span>ประมาณราคา:</span> <strong>${p.team.estimator || '-'}</strong></div>
+                    </div>
+                    
+                    <div class="stepper-container">
+                        <div class="stepper">
+                            <div class="stepper-progress" style="width: ${progressPercentage}%;"></div>
+                            ${stepsHtml}
+                        </div>
+                    </div>
+                    
+                    ${p.remark ? `
+                    <div class="project-remark" style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-color); border-left: 4px solid var(--primary-color); border-radius: 0 8px 8px 0; font-size: 0.95rem;">
+                        <span style="color: var(--text-muted); font-weight: 600; margin-right: 0.5rem;">หมายเหตุ:</span>
+                        <span style="color: var(--text-main);">${p.remark}</span>
+                    </div>` : ''}
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        // --- Login & Edit Logic ---
+        function updateLoginUI() {
+            const loginToggleBtn = document.getElementById('loginToggleBtn');
+            const addProjectBtn = document.getElementById('addProjectBtn');
+            if (loginToggleBtn) {
+                if (isAdminLoggedIn) {
+                    loginToggleBtn.innerHTML = '🔓 ออกจากระบบ';
+                    loginToggleBtn.title = 'ออกจากระบบ';
+                    loginToggleBtn.style.background = 'var(--primary-color)';
+                    loginToggleBtn.style.color = 'white';
+                    if (addProjectBtn) addProjectBtn.style.display = 'flex';
+                } else {
+                    loginToggleBtn.innerHTML = '🔑 เข้าสู่ระบบ';
+                    loginToggleBtn.title = 'เข้าสู่ระบบเจ้าหน้าที่';
+                    loginToggleBtn.style.background = 'var(--card-bg)';
+                    loginToggleBtn.style.color = 'var(--text-main)';
+                    if (addProjectBtn) addProjectBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function toggleLogin() {
+            if (isAdminLoggedIn) {
+                isAdminLoggedIn = false;
+                adminPinCode = '';
+                updateLoginUI();
+                filterProjects();
+                showToast('ออกจากระบบเรียบร้อยแล้ว', '🔒');
+            } else {
+                openLoginModal();
+            }
+        }
+
+        function pressPin(num) {
+            const pinInput = document.getElementById('pinInput');
+            if (!pinInput) return;
+            if (pinInput.value.length < 6) {
+                pinInput.value += num;
+            }
+            // เข้าสู่ระบบอัตโนมัติเมื่อกดครบ 6 หลัก
+            if (pinInput.value.length === 6) {
+                setTimeout(() => {
+                    submitLogin();
+                }, 200);
+            }
+        }
+
+        function backspacePin() {
+            const pinInput = document.getElementById('pinInput');
+            if (!pinInput) return;
+            pinInput.value = pinInput.value.slice(0, -1);
+        }
+
+        function clearPin() {
+            const pinInput = document.getElementById('pinInput');
+            if (!pinInput) return;
+            pinInput.value = '';
+        }
+
+        function openLoginModal() {
+            clearPin();
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+        }
+
+        function submitLogin() {
+            const pinInput = document.getElementById('pinInput');
+            const pin = pinInput ? pinInput.value : '';
+            if (pin === '888888') {
+                isAdminLoggedIn = true;
+                adminPinCode = pin;
+                closeLoginModal();
+                updateLoginUI();
+                filterProjects();
+                showToast('เข้าสู่ระบบสำเร็จ ยินดีต้อนรับครับ', '🔓');
+            } else {
+                showToast('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง', '❌');
+                clearPin();
+            }
+        }
+
+        // รองรับการกดแป้นพิมพ์ตัวเลขจากคีย์บอร์ดจริงเมื่อเปิดหน้าต่าง Login
+        document.addEventListener('keydown', function(event) {
+            const loginModal = document.getElementById('loginModal');
+            if (loginModal && loginModal.style.display !== 'none') {
+                if (event.key >= '0' && event.key <= '9') {
+                    pressPin(event.key);
+                } else if (event.key === 'Backspace') {
+                    backspacePin();
+                } else if (event.key === 'Escape') {
+                    closeLoginModal();
+                } else if (event.key === 'Enter') {
+                    submitLogin();
+                }
+            }
+        });
+
+        function parseThaiDateToIso(thaiDateStr) {
+            if (!thaiDateStr) return '';
+            const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const parts = thaiDateStr.split(' ');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const monthName = parts[1];
+                const yearB = parseInt(parts[2], 10);
+                
+                const monthIdx = months.indexOf(monthName);
+                if (monthIdx !== -1 && !isNaN(day) && !isNaN(yearB)) {
+                    const yearG = yearB - 543; // แปลงปี พ.ศ. เป็น ค.ศ.
+                    const dd = String(day).padStart(2, '0');
+                    const mm = String(monthIdx + 1).padStart(2, '0');
+                    return `${yearG}-${mm}-${dd}`;
+                }
+            }
+            if (/^\d{4}-\d{2}-\d{2}$/.test(thaiDateStr)) {
+                return thaiDateStr;
+            }
+            return '';
+        }
+
+        function openAddModal() {
+            document.getElementById('editModalTitle').textContent = '➕ เพิ่มโครงการใหม่';
+            document.getElementById('editProjectId').value = '';
+            document.getElementById('editProjectName').value = '';
+            document.getElementById('editProjectBudget').value = '';
+            document.getElementById('editProjectBudgetYear').value = '';
+            document.getElementById('editProjectBudgetType').value = '';
+            document.getElementById('editProjectOperationStatus').value = '';
+            
+            document.getElementById('editTeamSurveyor').value = '';
+            document.getElementById('editTeamDesigner').value = '';
+            document.getElementById('editTeamDraftsman').value = '';
+            document.getElementById('editTeamEstimator').value = '';
+            
+            for (let i = 0; i <= 6; i++) {
+                document.getElementById(`editDateStep${i}`).value = '';
+            }
+            
+            document.getElementById('editProjectRemark').value = '';
+            
+            // Sync checkbox selections
+            ['Surveyor', 'Designer', 'Draftsman', 'Estimator'].forEach(field => {
+                const inputEl = document.getElementById('editTeam' + field);
+                if (inputEl) inputEl.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function openEditModal(projectId) {
+            const p = allProjects.find(item => item.id.toString() === projectId.toString());
+            if (!p) return;
+            
+            document.getElementById('editModalTitle').textContent = '✏️ แก้ไขข้อมูลโครงการ';
+            document.getElementById('editProjectId').value = p.id;
+            document.getElementById('editProjectName').value = p.name || '';
+            document.getElementById('editProjectBudget').value = p.budget || 0;
+            document.getElementById('editProjectBudgetYear').value = p.budgetYear || '';
+            document.getElementById('editProjectBudgetType').value = p.budgetType || '';
+            document.getElementById('editProjectOperationStatus').value = p.operationStatus || '';
+            
+            document.getElementById('editTeamSurveyor').value = p.team.surveyor || '';
+            document.getElementById('editTeamDesigner').value = p.team.designer || '';
+            document.getElementById('editTeamDraftsman').value = p.team.draftsman || '';
+            document.getElementById('editTeamEstimator').value = p.team.estimator || '';
+            
+            // Populate วันที่ทั้ง 7 ขั้นตอน
+            document.getElementById('editDateStep0').value = parseThaiDateToIso(p.statusesText[0]);
+            document.getElementById('editDateStep1').value = parseThaiDateToIso(p.statusesText[1]);
+            document.getElementById('editDateStep2').value = parseThaiDateToIso(p.statusesText[2]);
+            document.getElementById('editDateStep3').value = parseThaiDateToIso(p.statusesText[3]);
+            document.getElementById('editDateStep4').value = parseThaiDateToIso(p.statusesText[4]);
+            document.getElementById('editDateStep5').value = parseThaiDateToIso(p.statusesText[5]);
+            document.getElementById('editDateStep6').value = parseThaiDateToIso(p.statusesText[6]);
+            
+            document.getElementById('editProjectRemark').value = p.remark || '';
+            
+            // Sync checkbox selections
+            ['Surveyor', 'Designer', 'Draftsman', 'Estimator'].forEach(field => {
+                const inputEl = document.getElementById('editTeam' + field);
+                if (inputEl) inputEl.dispatchEvent(new Event('input'));
+            });
+
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function submitEdit() {
+            const saveBtn = document.getElementById('saveEditBtn');
+            const pin = adminPinCode;
+            if (!pin) {
+                alert('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+                closeEditModal();
+                return;
+            }
+            
+            const rawId = document.getElementById('editProjectId').value;
+            const isNew = !rawId || rawId.toString().trim() === '';
+
+            const projectPayload = {
+                name: document.getElementById('editProjectName').value,
+                budget: parseFloat(document.getElementById('editProjectBudget').value) || 0,
+                budget_year: document.getElementById('editProjectBudgetYear').value,
+                budget_type: document.getElementById('editProjectBudgetType').value,
+                operation_status: document.getElementById('editProjectOperationStatus').value,
+                surveyor: document.getElementById('editTeamSurveyor').value,
+                designer: document.getElementById('editTeamDesigner').value,
+                draftsman: document.getElementById('editTeamDraftsman').value,
+                estimator: document.getElementById('editTeamEstimator').value,
+                step_1_date: document.getElementById('editDateStep0').value,
+                step_2_date: document.getElementById('editDateStep1').value,
+                step_3_date: document.getElementById('editDateStep2').value,
+                step_4_date: document.getElementById('editDateStep3').value,
+                step_5_date: document.getElementById('editDateStep4').value,
+                step_6_date: document.getElementById('editDateStep5').value,
+                step_7_date: document.getElementById('editDateStep6').value,
+                remark: document.getElementById('editProjectRemark').value,
+                updated_at: new Date().toISOString()
+            };
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '⏳ กำลังบันทึก...';
+
+            try {
+                if (supabaseClient) {
+                    if (isNew) {
+                        let nextId = 1;
+                        if (allProjects && allProjects.length > 0) {
+                            const maxId = Math.max(...allProjects.map(p => parseInt(p.id, 10) || 0));
+                            nextId = maxId + 1;
+                        }
+                        projectPayload.id = nextId;
+                        const { error: insertErr } = await supabaseClient
+                            .from('projects')
+                            .insert([projectPayload]);
+                        if (insertErr) throw insertErr;
+                    } else {
+                        projectPayload.id = parseInt(rawId, 10);
+                        const { error: updateErr } = await supabaseClient
+                            .from('projects')
+                            .update(projectPayload)
+                            .eq('id', projectPayload.id);
+                        if (updateErr) throw updateErr;
+                    }
+
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '💾 บันทึก';
+                    showToast('บันทึกข้อมูลสำเร็จเรียบร้อยแล้ว!', '💾');
+                    closeEditModal();
+
+                    // รีโหลดข้อมูลจาก Supabase มาแสดงผลทันที
+                    document.getElementById('loader').style.display = 'flex';
+                    document.getElementById('dashboard-content').style.display = 'none';
+                    await loadDashboardDataFromSupabase();
+                    filterProjects();
+
+                    // ซิงค์ Google Sheet เบื้องหลังถ้าเปิดใน Google Apps Script
+                    if (typeof google !== 'undefined') {
+                        google.script.run.updateProject(pin, {
+                            id: projectPayload.id,
+                            name: projectPayload.name,
+                            budget: projectPayload.budget,
+                            budgetYear: projectPayload.budget_year,
+                            budgetType: projectPayload.budget_type,
+                            operationStatus: projectPayload.operation_status,
+                            team: {
+                                surveyor: projectPayload.surveyor,
+                                designer: projectPayload.designer,
+                                draftsman: projectPayload.draftsman,
+                                estimator: projectPayload.estimator
+                            },
+                            statusesText: [
+                                projectPayload.step_1_date,
+                                projectPayload.step_2_date,
+                                projectPayload.step_3_date,
+                                projectPayload.step_4_date,
+                                projectPayload.step_5_date,
+                                projectPayload.step_6_date,
+                                projectPayload.step_7_date
+                            ],
+                            remark: projectPayload.remark
+                        });
+                    }
+                } else if (typeof google !== 'undefined') {
+                    // Fallback to Apps Script
+                    google.script.run
+                        .withSuccessHandler(function(newDataResponseStr) {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '💾 บันทึก';
+                            showToast('บันทึกข้อมูลสำเร็จเรียบร้อยแล้ว!', '💾');
+                            closeEditModal();
+                            handleDataResponse(newDataResponseStr);
+                            filterProjects();
+                        })
+                        .withFailureHandler(function(error) {
+                            saveBtn.disabled = false;
+                            saveBtn.innerHTML = '💾 บันทึก';
+                            showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.toString(), '❌');
+                        })
+                        .updateProject(pin, {
+                            id: rawId,
+                            name: projectPayload.name,
+                            budget: projectPayload.budget,
+                            budgetYear: projectPayload.budget_year,
+                            budgetType: projectPayload.budget_type,
+                            operationStatus: projectPayload.operation_status,
+                            team: {
+                                surveyor: projectPayload.surveyor,
+                                designer: projectPayload.designer,
+                                draftsman: projectPayload.draftsman,
+                                estimator: projectPayload.estimator
+                            },
+                            statusesText: [
+                                projectPayload.step_1_date,
+                                projectPayload.step_2_date,
+                                projectPayload.step_3_date,
+                                projectPayload.step_4_date,
+                                projectPayload.step_5_date,
+                                projectPayload.step_6_date,
+                                projectPayload.step_7_date
+                            ],
+                            remark: projectPayload.remark
+                        });
+                } else {
+                    console.log("Mock saving data: ", projectPayload);
+                    setTimeout(() => {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '💾 บันทึก';
+                        showToast('บันทึกข้อมูลสำเร็จ (Mock) !', '💾');
+                        closeEditModal();
+                    }, 1000);
+                }
+            } catch (err) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '💾 บันทึก';
+                showToast('เกิดข้อผิดพลาด: ' + (err.message || err), '❌');
+            }
+        }
+
+        // เรียกแสดงสถานะปุ่มล็อกอินตั้งต้น
+        updateLoginUI();
+
+        // ปิดดรอปดาวน์รายชื่อทีมงานเมื่อคลิกนอกพื้นที่
+        document.addEventListener('click', function(event) {
+            document.querySelectorAll('.checkbox-dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+        });
+
+        // อัปเดตตัวกรองขั้นตอนในหน้าแรกและพิมพ์รายงาน
+        function updateStepFiltersUI() {
+            const statusFilter = document.getElementById('statusFilter');
+            const printStatusFilter = document.getElementById('printStatusFilter');
+            if (!statusFilter || !printStatusFilter) return;
+
+            const val = statusFilter.value;
+            const printVal = printStatusFilter.value;
+
+            const htmlOptions = `
+                <option value="all">ทั้งหมด</option>
+                <option value="not_started">ยังไม่ดำเนินงาน</option>
+                ${STEPS.map((step, idx) => `<option value="${idx}">${idx + 1}. ${step}</option>`).join('')}
+            `;
+            
+            statusFilter.innerHTML = htmlOptions;
+            printStatusFilter.innerHTML = htmlOptions;
+
+            statusFilter.value = val;
+            printStatusFilter.value = printVal;
+        }
+
+        // อัปเดตป้ายกำกับขั้นตอนในแบบฟอร์มแก้ไข/เพิ่มโครงการ
+        function updateEditModalStepsUI() {
+            STEPS.forEach((step, idx) => {
+                const label = document.getElementById('labelStep' + idx);
+                if (label) {
+                    label.textContent = `${idx + 1}. ${step}:`;
+                }
+            });
+        }
+
+        // ฟังก์ชันแสดงข้อความแจ้งเตือนป๊อปอัป (Toast Notification)
+        function showToast(message, icon = '✔️') {
+            const toast = document.getElementById('toastNotification');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            if (!toast) return;
+
+            toastMessage.textContent = message;
+            toastIcon.textContent = icon;
+            
+            toast.classList.add('show');
+            
+            if (window.toastTimeout) {
+                clearTimeout(window.toastTimeout);
+            }
+            
+            window.toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+    </script>
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast">
+        <span class="toast-icon" id="toastIcon">✔️</span>
+        <span id="toastMessage"></span>
+    </div>
+
+</body>
+</html>
