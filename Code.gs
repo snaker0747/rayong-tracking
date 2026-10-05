@@ -86,7 +86,7 @@ function doPost(e) {
 
 // ฟังก์ชันลบโครงการออกจาก Google Sheet (ตามลำดับ ID)
 function deleteProject(pin, projectId) {
-  if (pin !== '888888') {
+  if (pin !== '888888' && pin !== '987654') {
     return JSON.stringify({ status: 'error', message: 'รหัส PIN ไม่ถูกต้อง' });
   }
   
@@ -266,7 +266,7 @@ function getDashboardData() {
 
 // ฟังก์ชันตรวจสอบ PIN และอัปเดตข้อมูลโครงการ (รองรับทั้งจากภายใน Apps Script และผ่าน Webhook POST จาก Vercel)
 function updateProject(pin, projectData) {
-  if (pin !== '888888') {
+  if (pin !== '888888' && pin !== '987654') {
     return JSON.stringify({ status: 'error', message: 'รหัส PIN ไม่ถูกต้อง' });
   }
   
@@ -412,7 +412,7 @@ function getDropdownOptions(sheet, colLetter) {
 
 // ฟังก์ชันซิงค์รายชื่อเจ้าหน้าที่ลง Google Sheet (อัปเดตชีตตัวเลือกและ Data Validation ในตาราง)
 function updateStaffListInSheet(pin, staffList) {
-  if (pin !== '888888') {
+  if (pin !== '888888' && pin !== '987654') {
     return JSON.stringify({ status: 'error', message: 'รหัส PIN ไม่ถูกต้อง' });
   }
 
@@ -466,7 +466,7 @@ function updateStaffListInSheet(pin, staffList) {
 
 // ฟังก์ชันซิงค์ตัวเลือกทั้งหมดในระบบลง Google Sheet (อัปเดตชีตตัวเลือกและ Data Validation ในตาราง)
 function updateSystemDropdownsInSheet(pin, dropdowns) {
-  if (pin !== '888888') {
+  if (pin !== '888888' && pin !== '987654') {
     return JSON.stringify({ status: 'error', message: 'รหัส PIN ไม่ถูกต้อง' });
   }
 
@@ -865,7 +865,7 @@ function authorizeDriveAccess() {
 }
 
 function handleContractPdfUpload(pin, payload) {
-  if (pin !== '888888') {
+  if (pin !== '888888' && pin !== '987654') {
     return JSON.stringify({ status: 'error', message: 'รหัส PIN ไม่ถูกต้อง' });
   }
 
@@ -934,7 +934,7 @@ function handleContractPdfUpload(pin, payload) {
 
 // ฟังก์ชันลบไฟล์เอกสารสัญญาออกจาก Google Drive เพื่อประหยัดพื้นที่
 function handleContractPdfDelete(pin, payload) {
-  if (pin !== '888888') {
+  if (pin !== '888888' && pin !== '987654') {
     return JSON.stringify({ status: 'error', message: 'รหัส PIN ไม่ถูกต้อง' });
   }
 
